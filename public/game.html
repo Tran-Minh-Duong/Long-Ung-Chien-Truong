@@ -1,0 +1,3318 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Long Ưng Chiến Trường - Đại Chiến 3 Đường</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800;900&family=Cinzel:wght@700;800;900&family=Lalezar&display=swap">
+<style>
+:root {
+  --gold: #f6c954;
+  --gold-dim: #9c7424;
+  --red: #ff4b4b;
+  --red-deep: #7f1d1d;
+  --blue: #38bdf8;
+  --blue-deep: #0c4a6e;
+  --ink: #fff7ea;
+  --display: "Lalezar", "Cinzel", "Be Vietnam Pro", system-ui, sans-serif;
+  --body: "Be Vietnam Pro", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; user-select: none; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #05050a;
+  color: var(--ink);
+  font-family: var(--body);
+  overflow: hidden;
+  height: 100%;
+}
+
+/* ===== Layout (standalone test vs embedded stage) ===== */
+.wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; padding: 12px; height: 100vh; }
+#box { height: calc(100vh - 24px); aspect-ratio: 9 / 16; position: relative; overflow: hidden; border-radius: 14px; border: 1px solid #3a2a40; background: #04050c; justify-self: center; }
+html.embed .wrap { display: block; padding: 0; }
+html.embed #box { height: 100vh; width: 100vw; aspect-ratio: auto; border: 0; border-radius: 0; }
+html.embed #panel { display: none; }
+
+#stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1080px;
+  height: 1920px;
+  transform-origin: 0 0;
+  overflow: hidden;
+  background: #060916 url('img/game/bg_stage.jpg') center / cover no-repeat;
+}
+#bgFxCanvas, #gameCanvas { position: absolute; left: 0; top: 0; pointer-events: none; }
+#gameCanvas { left: 26px; top: 416px; width: 1028px; height: 1028px; border-radius: 18px; }
+
+/* Subtle atmospheric vignette so overlays pop */
+#stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 48%, transparent 45%, rgba(4, 5, 14, 0.55) 100%),
+    linear-gradient(180deg, rgba(6, 9, 24, 0.45) 0%, transparent 18%, transparent 76%, rgba(5, 6, 15, 0.82) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===== ON-STAGE UI (1080x1920 coordinate system) ===== */
+#ui { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.o {
+  text-shadow:
+    0 3px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000,
+    2px 2px 0 #000, -2px -2px 0 #000, 0 4px 12px rgba(0, 0, 0, .9);
+}
+
+/* Header: Centered Eagle-Dragon Crest + Gold Title + Top-right Controls */
+#headerBar { position: absolute; top: 16px; left: 20px; right: 20px; height: 176px; }
+
+.brandWrap {
+  position: absolute;
+  left: 39%;
+  top: 8px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.crestSvg {
+  width: 110px;
+  height: 76px;
+  filter: drop-shadow(0 6px 14px rgba(255, 160, 40, .55)) drop-shadow(0 2px 3px #000);
+  margin-bottom: -12px;
+}
+.brandTitle {
+  font-family: var(--display);
+  font-size: 46px;
+  line-height: 1.04;
+  letter-spacing: 0.8px;
+  color: #ffe270;
+  -webkit-text-stroke: 3px #1f0d02;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 #1c0b02, 0 0 22px rgba(255, 196, 46, 0.6), 0 8px 16px rgba(0, 0, 0, 0.92);
+  white-space: nowrap;
+  position: relative;
+}
+.brandSubRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.brandSub {
+  font: 800 18px/1 var(--body);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #fde68a;
+  background: rgba(12, 10, 22, 0.72);
+  border: 1px solid rgba(246, 201, 84, 0.55);
+  border-radius: 999px;
+  padding: 4px 14px;
+}
+.verBadge {
+  font: 900 16px/1 var(--body);
+  color: #fff;
+  background: linear-gradient(180deg, #475569, #1e293b);
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.topControls {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+.resRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 16, 30, 0.85);
+  border: 1.5px solid rgba(246, 201, 84, 0.5);
+  border-radius: 10px;
+  padding: 5px 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .6);
+}
+.resRow span { font: 700 17px/1 var(--body); color: #fef08a; }
+.resRow select {
+  background: #0f172a;
+  color: #fff;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: 700 16px/1 var(--body);
+  cursor: pointer;
+}
+.btnGroup { display: flex; gap: 10px; }
+.rpgBtn {
+  border: 2px solid #d8b4fe;
+  border-radius: 12px;
+  padding: 8px 20px;
+  font: 800 20px/1 var(--body);
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #7e22ce 0%, #581c87 52%, #3b0764 100%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35), 0 4px 12px rgba(0, 0, 0, .75);
+  transition: transform .12s, filter .12s;
+}
+.rpgBtn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.rpgBtn:active { transform: translateY(1px); }
+
+/* Command guide & Score VS Bar above Map */
+#topHud {
+  position: absolute;
+  top: 192px;
+  left: 20px;
+  right: 20px;
+  height: 214px;
+}
+.scorePill {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(35, 26, 12, 0.92), rgba(14, 10, 6, 0.94));
+  border: 2px solid var(--gold);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .75);
+  white-space: nowrap;
+}
+.scorePill .pts { font: 800 22px/1 var(--body); color: #fde047; }
+.scorePill .clockBox {
+  font: 900 26px/1 var(--display);
+  color: #fff;
+  background: rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  padding: 4px 14px;
+  letter-spacing: 1px;
+}
+.scorePill .clockBox.hurry { color: #ff5757; animation: pulse .9s infinite; }
+@keyframes pulse { 50% { transform: scale(1.09); } }
+
+.cmdLeft {
+  position: absolute;
+  left: 0;
+  top: 26px;
+  width: 448px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(10, 12, 22, 0.78);
+  border: 1.5px solid rgba(255, 110, 110, 0.42);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .65);
+}
+.cmdLeft div {
+  font: 900 31px/1.24 var(--body);
+  color: #ff6b6b;
+  letter-spacing: -0.2px;
+}
+.cmdLeft b { color: #ff9a9a; }
+
+.vsWrap {
+  position: absolute;
+  left: 50%;
+  top: 66px;
+  transform: translateX(-50%);
+  width: 148px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+}
+.vsText {
+  font-family: var(--display);
+  font-size: 74px;
+  line-height: 1;
+  background: linear-gradient(180deg, #fffbe2 0%, #ffd24c 45%, #d97706 85%, #78350f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 #1f0e02) drop-shadow(0 0 18px rgba(255, 180, 40, .65));
+  font-style: italic;
+}
+
+.cmdRight {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  width: 448px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(10, 12, 22, 0.62);
+  border: 1.5px solid rgba(250, 204, 21, 0.35);
+}
+.cmdRight div {
+  font: 900 33px/1.28 var(--body);
+  color: #facc15;
+  white-space: nowrap;
+}
+
+/* Map Frame + Corner Base HUDs */
+#mapFrame {
+  position: absolute;
+  left: 22px;
+  top: 412px;
+  width: 1036px;
+  height: 1036px;
+  border-radius: 22px;
+  border: 5px solid #e7ba4d;
+  box-shadow:
+    inset 0 0 0 3px #422806,
+    0 0 0 3px #190e03,
+    0 12px 42px rgba(0, 0, 0, .85);
+  pointer-events: none;
+}
+
+/* Corner HUDs matching image */
+.cornerHud {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+#redCornerHud { left: 36px; bottom: 486px; align-items: flex-start; }
+#blueCornerHud { right: 36px; top: 426px; align-items: flex-end; }
+
+.avatarRow { display: flex; gap: 10px; align-items: center; }
+.avSlot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+}
+.avRank {
+  font: 900 18px/1 var(--body);
+  color: #fef08a;
+  margin-bottom: -6px;
+  z-index: 2;
+}
+.avCircle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 2.5px solid #fbbf24;
+  background: radial-gradient(circle at 35% 30%, #334155, #0f172a);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .85);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font: 900 20px/1 var(--body);
+  color: #fff;
+}
+.avCircle img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avName {
+  margin-top: 2px;
+  max-width: 66px;
+  font: 700 14px/1.1 var(--body);
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.nexusBarWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gemOrb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid #f6c954;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 14px rgba(0, 0, 0, .85);
+}
+.gemOrb.red { background: radial-gradient(circle at 35% 30%, #fca5a5, #dc2626 55%, #450a0a); box-shadow: 0 0 18px rgba(239, 68, 68, .75); }
+.gemOrb.blue { background: radial-gradient(circle at 35% 30%, #bae6fd, #0284c7 55%, #082f49); box-shadow: 0 0 18px rgba(56, 189, 248, .75); }
+.gemDiamond { width: 18px; height: 18px; transform: rotate(45deg); border: 2px solid #fff9; }
+.gemOrb.red .gemDiamond { background: #ef4444; }
+.gemOrb.blue .gemDiamond { background: #38bdf8; }
+
+.hpBarBox {
+  width: 224px;
+  height: 30px;
+  border-radius: 8px;
+  border: 2.5px solid #cbd5e1;
+  background: rgba(10, 12, 20, 0.88);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .85);
+}
+.hpBarFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  transition: width 0.25s ease-out;
+}
+.hpBarFill.red { background: linear-gradient(180deg, #ff7e7e 0%, #dc2626 50%, #7f1d1d 100%); }
+.hpBarFill.blue { background: linear-gradient(180deg, #7dd3fc 0%, #0284c7 50%, #0c4a6e 100%); right: 0; left: auto; }
+.hpBarText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 20px/1 var(--body);
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+
+/* Live Announce & Gift Summon Callout inside Stage */
+#bossToast {
+  position: absolute;
+  top: 432px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  opacity: 0;
+  z-index: 12;
+  padding: 10px 30px;
+  border-radius: 999px;
+  border: 2.5px solid var(--gold);
+  background: linear-gradient(180deg, rgba(38, 20, 8, 0.94), rgba(14, 8, 4, 0.96));
+  font: 900 28px/1.1 var(--body);
+  color: #fde047;
+  box-shadow: 0 0 28px rgba(250, 204, 21, .45);
+  transition: opacity .28s, transform .28s;
+  white-space: nowrap;
+}
+#bossToast.on { opacity: 1; transform: translateX(-50%) scale(1); }
+
+#summonBanner {
+  position: absolute;
+  top: 1336px;
+  right: 28px;
+  left: auto;
+  max-width: 726px;
+  box-sizing: border-box;
+  transform-origin: right center;
+  transform: translateY(18px) scale(0.92);
+  opacity: 0;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px;
+  border-radius: 22px;
+  border: 3px solid var(--gold);
+  background: linear-gradient(95deg, rgba(16, 12, 32, 0.95), rgba(48, 22, 12, 0.95));
+  box-shadow: 0 8px 34px rgba(0, 0, 0, .85), 0 0 25px rgba(246, 201, 84, .35);
+  transition: opacity .28s, transform .32s cubic-bezier(.18, .89, .32, 1.28);
+  white-space: nowrap;
+  pointer-events: none;
+}
+#summonBanner.on { opacity: 1; transform: translateY(0) scale(1); }
+#summonBanner.vfx1 { border-color: #cbd5e1; box-shadow: 0 8px 30px rgba(0,0,0,.85), 0 0 26px rgba(148, 163, 184, .48); }
+#summonBanner.vfx2 { border-color: #38bdf8; background: linear-gradient(95deg, rgba(18, 16, 46, .96), rgba(14, 52, 74, .96)); box-shadow: 0 8px 36px rgba(0,0,0,.88), 0 0 38px rgba(56, 189, 248, .62), inset 0 0 18px rgba(192, 132, 252, .3); }
+#summonBanner.vfx3 { border-color: #fde047; background: linear-gradient(95deg, rgba(58, 20, 8, .96), rgba(92, 46, 8, .96), rgba(45, 16, 42, .96)); box-shadow: 0 10px 44px rgba(0,0,0,.9), 0 0 48px rgba(250, 204, 21, .75), inset 0 0 22px rgba(251, 146, 60, .38); }
+#summonBanner.vfx3.on { transform: translateY(-4px) scale(1.02); }
+#summonBanner.vfx4 { border-width: 3.5px; border-color: #fb923c; background: linear-gradient(95deg, rgba(84, 18, 12, .97), rgba(132, 68, 8, .97), rgba(66, 20, 68, .97)); animation: bannerPulse4 1.1s ease-in-out infinite alternate; }
+#summonBanner.vfx4.on { transform: translateY(-6px) scale(1.03); }
+#summonBanner.vfx5 { border-width: 4px; border-color: #fef08a; background: linear-gradient(95deg, rgba(102, 20, 14, .98), rgba(164, 92, 8, .98), rgba(46, 18, 92, .98)); animation: bannerPulse5 .85s ease-in-out infinite alternate; }
+#summonBanner.vfx5.on { transform: translateY(-8px) scale(1.04); }
+@keyframes bannerPulse4 {
+  from { box-shadow: 0 10px 46px rgba(0,0,0,.92), 0 0 42px rgba(251, 146, 60, .75), 0 0 80px rgba(250, 204, 21, .45); }
+  to { box-shadow: 0 10px 46px rgba(0,0,0,.92), 0 0 64px rgba(253, 224, 71, .95), 0 0 110px rgba(249, 115, 22, .65); }
+}
+@keyframes bannerPulse5 {
+  from { box-shadow: 0 12px 54px rgba(0,0,0,.95), 0 0 56px rgba(253, 224, 71, .9), 0 0 110px rgba(244, 63, 94, .65); }
+  to { box-shadow: 0 12px 54px rgba(0,0,0,.95), 0 0 84px rgba(255, 255, 255, .98), 0 0 140px rgba(250, 204, 21, .88); }
+}
+#summonBanner .sAv {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 2.5px solid #fde047;
+  background: #1e293b;
+  display: grid;
+  place-items: center;
+  font: 900 20px/1 var(--body);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+#summonBanner .sAv img { width: 100%; height: 100%; object-fit: cover; }
+#summonBanner .sTxt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+#summonBanner .sTxt b { display: block; font: 900 21px/1.15 var(--body); color: #fde047; text-shadow: 0 2px 6px rgba(0,0,0,.9); overflow: hidden; text-overflow: ellipsis; }
+#summonBanner .sTxt span { font: 700 17px/1.2 var(--body); color: #fff; overflow: hidden; text-overflow: ellipsis; }
+#summonBanner .sCoin {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fde047, #d97706);
+  color: #1c1004;
+  font: 900 16px/1 var(--body);
+  box-shadow: 0 2px 12px rgba(250, 204, 21, .55);
+  border: 1.5px solid #fef9c3;
+  flex-shrink: 0;
+}
+
+/* Footer area below map (1460..1900) */
+#footerHud {
+  position: absolute;
+  top: 1458px;
+  left: 20px;
+  right: 20px;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: 468px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.footerLeft { display: flex; flex-direction: column; gap: 12px; }
+.joinCtaCard {
+  background: rgba(9, 11, 22, 0.84);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 14px 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .75);
+}
+.joinCtaCard .rLine {
+  font: 900 38px/1.2 var(--body);
+  color: #fff;
+  text-shadow: 0 2px 0 #b91c1c, 0 -2px 0 #b91c1c, 2px 0 0 #b91c1c, -2px 0 0 #b91c1c, 0 4px 10px #000;
+}
+.joinCtaCard .bLine {
+  font: 900 38px/1.2 var(--body);
+  color: #fff;
+  text-shadow: 0 2px 0 #0284c7, 0 -2px 0 #0284c7, 2px 0 0 #0284c7, -2px 0 0 #0284c7, 0 4px 10px #000;
+}
+
+.battleStatsBox {
+  background: rgba(9, 11, 22, 0.78);
+  border: 1.5px solid rgba(246, 201, 84, 0.35);
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.teamCounters {
+  display: flex;
+  justify-content: space-between;
+  font: 800 20px/1.2 var(--body);
+}
+.teamCounters .rc { color: #fca5a5; }
+.teamCounters .bc { color: #7dd3fc; }
+.buffRow { display: flex; gap: 8px; flex-wrap: wrap; min-height: 28px; }
+.buffBadge {
+  font: 800 16px/1 var(--body);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .25);
+}
+.buffBadge.drag { background: rgba(234, 88, 12, 0.3); color: #fed7aa; border-color: #fb923c; }
+.buffBadge.baron { background: rgba(147, 51, 234, 0.35); color: #e9d5ff; border-color: #c084fc; }
+#tickerBox {
+  font: 600 17px/1.35 var(--body);
+  color: #cbd5e1;
+  min-height: 72px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#tickerBox div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Right Legend Box matching Image 1 */
+.legendCard {
+  background: rgba(12, 11, 22, 0.86);
+  border: 2px solid var(--gold-dim);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .82);
+}
+.legendTeams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pillTeamRed {
+  background: linear-gradient(180deg, #b91c1c, #7f1d1d);
+  border: 1.5px solid #fca5a5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: 900 22px/1 var(--body);
+  text-align: center;
+  color: #fff;
+}
+.pillTeamBlue {
+  background: linear-gradient(180deg, #0369a1, #0c4a6e);
+  border: 1.5px solid #7dd3fc;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: 900 22px/1 var(--body);
+  text-align: center;
+  color: #fff;
+}
+.legendCmd {
+  display: flex;
+  justify-content: space-between;
+  font: 800 20px/1.35 var(--body);
+  padding: 2px 4px;
+}
+.legendCmd span:first-child { color: #93c5fd; }
+.legendCmd span:last-child { color: #f8fafc; }
+
+.giftRows {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.giftRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.giftRow img { width: 42px; height: 42px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 2px 4px #000); }
+.giftRow b { font: 800 24px/1.15 var(--body); color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.giftRow small { margin-left: auto; font: 700 17px/1 var(--body); color: #fde047; opacity: 0.92; padding-left: 8px; flex-shrink: 0; }
+.giftRows.compact { gap: 4px; max-height: 280px; overflow-y: auto; }
+.giftRows.compact .giftRow img { width: 32px; height: 32px; }
+.giftRows.compact .giftRow b { font-size: 19px; }
+.giftRows.compact .giftRow small { font-size: 15px; }
+
+/* Victory Result Overlay */
+#result {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle, rgba(10, 8, 22, .65), rgba(0, 0, 0, .9));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .45s;
+}
+#result.on { opacity: 1; }
+.resCard {
+  width: 780px;
+  padding: 36px 42px;
+  border-radius: 28px;
+  border: 4px solid var(--gold);
+  background: linear-gradient(180deg, #1b152b, #0c0a18);
+  text-align: center;
+  box-shadow: 0 0 60px rgba(246, 201, 84, .35);
+}
+.resCard .w { font: 400 74px/1.05 var(--display); margin-bottom: 16px; }
+.resCard .m { font: 700 26px/1.6 var(--body); color: #e2e8f0; margin-bottom: 18px; }
+.resCard .s { font: 800 24px/1.2 var(--body); color: #fde047; }
+
+/* Settings / Disclaimers Modal (accessible on stage) */
+#settingsModal {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  background: rgba(3, 4, 12, 0.86);
+  display: none;
+  place-items: center;
+  padding: 48px;
+  pointer-events: auto;
+}
+#settingsModal.on { display: grid; }
+.modalBox {
+  width: 920px;
+  max-height: 1580px;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 3px solid var(--gold);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 60px #000;
+}
+.modalHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+.modalHead h3 { margin: 0; font: 900 32px/1.2 var(--body); color: #fde047; }
+.closeBtn {
+  border: 0;
+  background: #ef4444;
+  color: #fff;
+  font: 800 22px/1 var(--body);
+  border-radius: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.discItem {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+}
+.discItem b { display: block; font: 800 22px/1.3 var(--body); color: #fbbf24; margin-bottom: 4px; }
+.discItem p { margin: 0; font: 500 20px/1.45 var(--body); color: #cbd5e1; }
+
+/* Standalone Right-Side Test Panel (when opened directly at /game.html) */
+#panel {
+  overflow-y: auto;
+  padding: 16px;
+  border-radius: 14px;
+  background: #0f1320;
+  border: 1px solid #262e45;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+}
+#panel h3 { margin: 0 0 6px; font-size: 13px; color: #f6c954; text-transform: uppercase; letter-spacing: .5px; }
+.pGroup { background: #161b2c; border-radius: 10px; padding: 10px; border: 1px solid #242b40; }
+.pRow { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.pBtn {
+  background: #232b42;
+  color: #f1f5f9;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font: 600 12px/1.2 var(--body);
+  cursor: pointer;
+}
+.pBtn:hover { background: #2f3a59; }
+.pBtn.on { background: #f59e0b; color: #090d16; border-color: #fbbf24; }
+.pBtn.red { background: #991b1b; border-color: #ef4444; }
+.pBtn.blue { background: #075985; border-color: #38bdf8; }
+#stats, #mclog { font-size: 12px; line-height: 1.45; color: #cbd5e1; }
+#mclog { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="box">
+    <div id="stage">
+      <canvas id="bgFxCanvas" width="1080" height="1920"></canvas>
+      <canvas id="gameCanvas" width="1028" height="1028"></canvas>
+
+      <div id="ui">
+        <!-- Header -->
+        <div id="headerBar">
+          <div class="brandWrap">
+            <svg class="crestSvg" viewBox="0 0 180 120" aria-hidden="true">
+              <defs>
+                <linearGradient id="crestGold" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#fff8cf"/>
+                  <stop offset="45%" stop-color="#fbbf24"/>
+                  <stop offset="100%" stop-color="#92400e"/>
+                </linearGradient>
+                <linearGradient id="wingFire" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#fde047"/>
+                  <stop offset="60%" stop-color="#ea580c"/>
+                  <stop offset="100%" stop-color="#7f1d1d"/>
+                </linearGradient>
+              </defs>
+              <path d="M90 108 L45 78 L10 30 L42 42 L26 16 L65 44 L80 28 L90 12 L100 28 L115 44 L154 16 L138 42 L170 30 L135 78 Z" fill="url(#wingFire)" stroke="#2c1202" stroke-width="4" stroke-linejoin="round"/>
+              <path d="M90 18 C78 36 74 52 84 68 L70 92 L90 104 L110 92 L96 68 C106 52 102 36 90 18 Z" fill="url(#crestGold)" stroke="#1f0d02" stroke-width="3.5"/>
+              <circle cx="84" cy="44" r="3.5" fill="#dc2626"/>
+              <circle cx="96" cy="44" r="3.5" fill="#dc2626"/>
+            </svg>
+            <div class="brandTitle o">LONG ƯNG CHIẾN TRƯỜNG</div>
+            <div class="brandSubRow">
+              <span class="brandSub">ĐẠI CHIẾN 3 ĐƯỜNG</span>
+              <span class="verBadge">1.6.0</span>
+            </div>
+          </div>
+
+          <div class="topControls">
+            <label class="resRow">
+              <span>Độ phân giải:</span>
+              <select id="resSelect" aria-label="Độ phân giải">
+                <option value="864x1536" selected>864×1536</option>
+                <option value="1080x1920">1080×1920</option>
+                <option value="720x1280">720×1280</option>
+              </select>
+            </label>
+            <div class="btnGroup">
+              <button class="rpgBtn" id="homeBtn" type="button">Trang chủ</button>
+              <button class="rpgBtn" id="settingsBtn" type="button">Thiết lập</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Command Guide & VS -->
+        <div id="topHud">
+          <div class="scorePill">
+            <span class="pts" id="totalPtsTxt">Số điểm: 0.00 vạn · 🪙 X1</span>
+            <span class="clockBox" id="clock">30:00</span>
+          </div>
+
+          <div class="cmdLeft o">
+            <div><b>top</b> = đường trên</div>
+            <div><b>adc</b> = đường dưới</div>
+            <div><b>mid</b> = đường giữa</div>
+            <div><b>bac</b> = kéo về nhà</div>
+          </div>
+
+          <div class="vsWrap">
+            <div class="vsText">VS</div>
+          </div>
+
+          <div class="cmdRight o">
+            <div>upatk = ăn rồng</div>
+            <div>downatk = ăn baro</div>
+          </div>
+        </div>
+
+        <!-- Map Ornamental Border -->
+        <div id="mapFrame"></div>
+
+        <!-- Blue Top-Right Base Corner HUD -->
+        <div class="cornerHud" id="blueCornerHud">
+          <div class="avatarRow" id="blueAvatars"></div>
+          <div class="nexusBarWrap">
+            <div class="hpBarBox">
+              <div class="hpBarFill blue" id="blueHpFill"></div>
+              <div class="hpBarText o" id="blueHpTxt">100.00%</div>
+            </div>
+            <div class="gemOrb blue"><div class="gemDiamond"></div></div>
+          </div>
+        </div>
+
+        <!-- Red Bottom-Left Base Corner HUD -->
+        <div class="cornerHud" id="redCornerHud">
+          <div class="avatarRow" id="redAvatars"></div>
+          <div class="nexusBarWrap">
+            <div class="gemOrb red"><div class="gemDiamond"></div></div>
+            <div class="hpBarBox">
+              <div class="hpBarFill red" id="redHpFill"></div>
+              <div class="hpBarText o" id="redHpTxt">100.00%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Stage Toasts -->
+        <div id="bossToast" class="o"></div>
+        <div id="summonBanner">
+          <div class="sAv" id="sbAv"></div>
+          <div class="sTxt">
+            <b id="sbTitle">TRIỆU HỒI BÁ CHỦ RỒNG ƯNG!</b>
+            <span id="sbSub">Đội Đỏ · Tiếp viện tức thì</span>
+          </div>
+          <div class="sCoin" id="sbCoin" style="display:none">🪙 299 xu</div>
+        </div>
+
+        <!-- Footer below Map -->
+        <div id="footerHud">
+          <div class="footerLeft">
+            <div class="joinCtaCard">
+              <div class="rLine">cmt 1 vào đỏ</div>
+              <div class="bLine">cmt 2 vào xanh</div>
+            </div>
+            <div class="battleStatsBox">
+              <div class="teamCounters">
+                <span class="rc" id="redStatTxt">🔴 Đỏ: 0 cmt · 0 hạ</span>
+                <span class="bc" id="blueStatTxt">🔵 Xanh: 0 cmt · 0 hạ</span>
+              </div>
+              <div class="buffRow" id="buffRow"></div>
+              <div id="tickerBox"></div>
+            </div>
+          </div>
+
+          <div class="legendCard">
+            <div class="legendTeams">
+              <div class="pillTeamRed">1 Vào đội đỏ</div>
+              <div class="pillTeamBlue">2 Vào đội xanh</div>
+            </div>
+            <div class="legendCmd"><span>top/mid/adc/bac</span><span>Thay đổi lộ trình</span></div>
+            <div class="legendCmd"><span>upatk/downatk</span><span>Tấn công boss</span></div>
+            <div class="giftRows" id="giftRows">
+              <div class="giftRow"><img src="img/game/gift_rose.webp" alt="Rose"><b>Triệu Binh</b><small>Rose</small></div>
+              <div class="giftRow"><img src="img/game/gift_rosa.webp" alt="Rosa"><b>Triệu Cung Binh</b><small>Rosa</small></div>
+              <div class="giftRow"><img src="img/game/gift_doughnut.webp" alt="Doughnut"><b>Triệu hồi kỵ sĩ rồng</b><small>Doughnut</small></div>
+              <div class="giftRow"><img src="img/game/gift_cap.webp" alt="Cap"><b>Triệu hồi rồng xương</b><small>Cap</small></div>
+              <div class="giftRow"><img src="img/game/gift_corgi.webp" alt="Corgi"><b>Triệu hồi bá chủ rồng ưng</b><small>Corgi</small></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Match End Result -->
+        <div id="result">
+          <div class="resCard">
+            <div class="w o">ĐỘI ĐỎ CHIẾN THẮNG!</div>
+            <div class="m"></div>
+            <div class="s">Trận mới sau 10 giây...</div>
+          </div>
+        </div>
+
+        <!-- Modal: Settings & 7 Disclaimers -->
+        <div id="settingsModal">
+          <div class="modalBox">
+            <div class="modalHead">
+              <h3>Thiết lập &amp; 7 Điều Lưu Ý Trách Nhiệm</h3>
+              <button class="closeBtn" id="closeModalBtn" type="button">Đóng ✕</button>
+            </div>
+            <div class="discItem">
+              <b>Cấu hình kết nối TikTok LIVE &amp; Trình phát</b>
+              <p>Link cho TikTok LIVE Studio (khổ 1080×1920): <code id="stageUrlCode">http://lvh.me:3000/?view=stage</code>. Độ phân giải UI hiện tại: <span id="modalResTxt">864×1536</span>. Cổng SSE đồng bộ realtime từ server nội bộ.</p>
+            </div>
+            <div class="discItem"><b>1. Đồ hoạ và bản đồ là hình mô phỏng</b><p>Bản đồ 3 đường, quái vật, rồng và hiệu ứng kỹ năng được thiết kế mô phỏng theo phong cách chiến thuật giải trí, không thuộc hay đại diện cho bất kỳ tựa game MOBA thương mại nào.</p></div>
+            <div class="discItem"><b>2. Không dùng game để cá cược hay trao thưởng</b><p>Game chỉ tính sát thương, phá nhà chính và xếp hạng Top 1, 2, 3 người đóng góp nhiều nhất mỗi trận cho vui, không có giải thưởng. Người tổ chức tự chịu hoàn toàn trách nhiệm nếu tự ý đặt kèo trái phép.</p></div>
+            <div class="discItem"><b>3. Tiền quà là thu nhập của bạn</b><p>Quà người xem tặng để triệu hồi lính và rồng là thu nhập của người live. Việc kê khai, nộp thuế do người dùng tự tìm hiểu theo quy định hiện hành.</p></div>
+            <div class="discItem"><b>4. Kết nối và giọng đọc dùng công cụ không chính thức</b><p>Game nối vào phòng live và tạo giọng đọc qua công cụ bên ngoài (Edge/Google/VieNeu), có thể ngừng chạy bất kỳ lúc nào. Rủi ro tài khoản do bạn tự cân nhắc.</p></div>
+            <div class="discItem"><b>5. Bộ lọc từ tục không bắt được hết</b><p>Game chỉ nhận các từ khoá lệnh hợp lệ (1, 2, top, mid, adc, bac, upatk, downatk) và lọc tên hiển thị nhạy cảm, MC không đọc nguyên văn comment tự do của người xem.</p></div>
+            <div class="discItem"><b>6. Thông số quà tặng và sức mạnh mặc định</b><p>Thông số máu, sát thương và quà (Hoa hồng, Quà cấp 2, Donut, Mũ, Corgi) cấu hình cân bằng mặc định, có thể chỉnh lại trong src/game/unitConfig.ts và public/game.html.</p></div>
+            <div class="discItem"><b>7. Dùng game là bạn tự trách nhiệm</b><p>Game chia sẻ nguyên trạng, không kèm cam kết pháp lý hay bồi thường thiệt hại phát sinh khi sử dụng.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Standalone Control Panel (visible only when NOT embedded in React Host) -->
+  <aside id="panel">
+    <div class="pGroup">
+      <h3>Điều khiển nhanh (Chế độ độc lập)</h3>
+      <div class="pRow">
+        <button class="pBtn" id="snd">🔇 Bật âm thanh</button>
+        <button class="pBtn" id="newMatch">⚔️ Trận mới</button>
+      </div>
+      <div class="pRow">
+        <button class="pBtn on" data-len="1800">30 phút</button>
+        <button class="pBtn" data-len="300">5 phút</button>
+        <button class="pBtn" data-len="90">90s</button>
+        <button class="pBtn" data-jump="1">Hiệp 2</button>
+        <button class="pBtn" data-jump="1.5">Rồng/Baron</button>
+        <button class="pBtn" data-jump="3">3p cuối</button>
+      </div>
+    </div>
+
+    <div class="pGroup">
+      <h3>Lệnh Comment &amp; Giả lập</h3>
+      <div class="pRow">
+        <button class="pBtn red" data-act="c1">Gõ "1" (Đỏ)</button>
+        <button class="pBtn blue" data-act="c2">Gõ "2" (Xanh)</button>
+        <button class="pBtn" data-act="top">top</button>
+        <button class="pBtn" data-act="mid">mid</button>
+        <button class="pBtn" data-act="adc">adc</button>
+        <button class="pBtn" data-act="bac">bac</button>
+        <button class="pBtn" data-act="upatk">upatk</button>
+        <button class="pBtn" data-act="downatk">downatk</button>
+        <button class="pBtn" data-act="like">Thả tim</button>
+      </div>
+      <div class="pRow">
+        <button class="pBtn red on" data-side="0">Phe Đỏ</button>
+        <button class="pBtn blue" data-side="1">Phe Xanh</button>
+        <button class="pBtn" data-gift="1" data-name="Hoa hồng">🌹 Hoa hồng</button>
+        <button class="pBtn" data-gift="10" data-name="Quà cấp 2">🌺 Quà cấp 2</button>
+        <button class="pBtn" data-gift="30" data-name="Donut">🍩 Donut</button>
+        <button class="pBtn" data-gift="99" data-name="Mũ">🧢 Mũ</button>
+        <button class="pBtn" data-gift="299" data-name="Corgi">🐶 Corgi</button>
+      </div>
+      <div class="pRow">
+        <button class="pBtn on" data-auto="0">Tắt auto</button>
+        <button class="pBtn" data-auto="12">12 người</button>
+        <button class="pBtn" data-auto="40">40 người</button>
+        <button class="pBtn" data-auto="90">90 người</button>
+      </div>
+    </div>
+
+    <div class="pGroup">
+      <h3>Giọng MC &amp; Trạng thái</h3>
+      <div class="pRow">
+        <label><input type="checkbox" id="mcOn" checked> Bật MC</label>
+        <select id="mcVoice">
+          <option value="Nam Minh">Nam Minh</option>
+          <option value="Hoài My">Hoài My</option>
+          <option value="Adam bựa">Adam bựa</option>
+        </select>
+        <button class="pBtn" id="mcTest">▶ Test MC</button>
+      </div>
+      <div class="pRow">
+        <label>Tốc độ <input type="range" id="mcSpeed" min="0.9" max="1.5" step="0.05" value="1.15"><span id="mcSpeedV">1.15x</span></label>
+        <label>Biểu cảm <input type="range" id="mcExpr" min="0.6" max="1.3" step="0.05" value="0.95"><span id="mcExprV">0.95</span></label>
+      </div>
+      <div id="mcState">Sẵn sàng</div>
+      <div id="mclog"></div>
+    </div>
+
+    <div class="pGroup">
+      <h3>Thông số realtime</h3>
+      <div id="stats">Khởi tạo...</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const QS = new URLSearchParams(location.search);
+const EMBED = QS.get('embed') === '1';
+const MUTED = QS.get('mute') === '1';
+if (EMBED) document.documentElement.classList.add('embed');
+
+const $ = (id) => document.getElementById(id);
+
+// Fit 1080x1920 stage cleanly into container
+const stageEl = $('stage');
+const boxEl = $('box');
+function fitStage() {
+  const s = Math.min(boxEl.clientWidth / 1080, boxEl.clientHeight / 1920);
+  stageEl.style.transform = `scale(${s})`;
+}
+addEventListener('resize', fitStage);
+fitStage();
+
+// Resolution switcher & Settings modal
+$('stageUrlCode').textContent = `http://lvh.me:${location.port || 3000}/?view=stage`;
+$('resSelect').onchange = (e) => {
+  $('modalResTxt').textContent = e.target.value;
+};
+$('settingsBtn').onclick = () => $('settingsModal').classList.add('on');
+$('closeModalBtn').onclick = () => $('settingsModal').classList.remove('on');
+$('homeBtn').onclick = () => {
+  $('settingsModal').classList.remove('on');
+  toastBanner('🏠 Long Ưng Chiến Trường · Đã sẵn sàng chiến đấu!');
+};
+
+// ================= BANNED WORD & NAME FILTER =================
+const BANNED_SET = new Set([
+  'lon', 'lồn', 'lin', 'lìn', 'cac', 'cặc', 'buoi', 'buồi', 'deo', 'đéo', 'dit', 'địt',
+  'du', 'đụ', 'di', 'đĩ', 'cut', 'cứt', 'dm', 'đm', 'dmm', 'đmm', 'dcm', 'đcm',
+  'dkm', 'đkm', 'vcl', 'vkl', 'vcc', 'clgt', 'loz', 'ditme', 'dume', 'cmm',
+  'fuck', 'fck', 'fuk', 'shit', 'bitch', 'dick', 'pussy', 'sex', 'sexy', 'porn',
+  'nude', 'xxx', 'casino', 'scam', 'giết', 'chém',
+]);
+const BANNED_PHRASES = ['địt mẹ', 'đụ má', 'đù má', 'đéo mẹ', 'con đĩ', 'dit me', 'du ma', 'ditme', 'lừa đảo', 'cá độ', 'cờ bạc'];
+function safeName(raw, fallback = 'Chiến binh') {
+  const s = String(raw || '').normalize('NFC').trim().slice(0, 26);
+  if (!s) return fallback;
+  const low = s.toLowerCase();
+  const compact = low.replace(/[.\-_*]+/g, '');
+  const tokens = low.split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
+  const compactTokens = compact.split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
+  if (tokens.some((t) => BANNED_SET.has(t)) || compactTokens.some((t) => BANNED_SET.has(t))) return 'Chiến Binh Ẩn Danh';
+  const joined = ` ${tokens.join(' ')} `;
+  if (BANNED_PHRASES.some((p) => joined.includes(` ${p} `))) return 'Chiến Binh Ẩn Danh';
+  return s;
+}
+
+// ================= COORDINATES & WAYPOINTS (1028x1028 canvas from 0..1000 norm) =================
+const MAP_PX = 1028;
+const SXY = MAP_PX / 1000;
+const pt = (x, y) => ({ x: x * SXY, y: y * SXY });
+
+const RED = 0, BLUE = 1;
+const TEAM_LABEL = ['Đỏ', 'Xanh'];
+const TEAM_COL = ['#ef4444', '#38bdf8'];
+const NEXUS_POS = [pt(128, 862), pt(875, 130)];
+const BOSS_POS = { drag: pt(338, 292), baron: pt(665, 705) };
+
+const ROUTES_NORM = {
+  red: {
+    top: [[128, 862], [74, 710], [70, 440], [82, 165], [165, 82], [460, 72], [715, 76], [875, 130]],
+    mid: [[128, 862], [270, 725], [415, 585], [500, 500], [585, 415], [730, 275], [875, 130]],
+    bot: [[128, 862], [285, 922], [555, 926], [830, 912], [915, 830], [922, 540], [918, 290], [875, 130]],
+    bac: [[500, 500], [270, 725], [160, 830], [128, 862]],
+    upatk: [[160, 830], [270, 725], [415, 585], [380, 410], [338, 292]],
+    downatk: [[160, 830], [270, 725], [415, 585], [565, 620], [665, 705]],
+  },
+  blue: {
+    top: [[875, 130], [715, 76], [460, 72], [165, 82], [82, 165], [70, 440], [74, 710], [128, 862]],
+    mid: [[875, 130], [730, 275], [585, 415], [500, 500], [415, 585], [270, 725], [128, 862]],
+    bot: [[875, 130], [918, 290], [922, 540], [915, 830], [830, 912], [555, 926], [285, 922], [128, 862]],
+    bac: [[500, 500], [730, 275], [840, 165], [875, 130]],
+    upatk: [[840, 165], [730, 275], [585, 415], [410, 385], [338, 292]],
+    downatk: [[840, 165], [730, 275], [585, 415], [625, 575], [665, 705]],
+  },
+};
+const ROUTE_PTS = {
+  0: Object.fromEntries(Object.entries(ROUTES_NORM.red).map(([k, arr]) => [k, arr.map(([x, y]) => pt(x, y))])),
+  1: Object.fromEntries(Object.entries(ROUTES_NORM.blue).map(([k, arr]) => [k, arr.map(([x, y]) => pt(x, y))])),
+};
+
+const TURRET_SPOTS = [
+  // Red turrets
+  { id: 'r_t1', t: 0, lane: 'top', x: 72, y: 315, maxHp: 3800 },
+  { id: 'r_t2', t: 0, lane: 'top', x: 74, y: 595, maxHp: 4400 },
+  { id: 'r_m1', t: 0, lane: 'mid', x: 365, y: 635, maxHp: 3800 },
+  { id: 'r_m2', t: 0, lane: 'mid', x: 248, y: 752, maxHp: 4400 },
+  { id: 'r_b1', t: 0, lane: 'bot', x: 685, y: 922, maxHp: 3800 },
+  { id: 'r_b2', t: 0, lane: 'bot', x: 395, y: 924, maxHp: 4400 },
+  // Blue turrets
+  { id: 'b_t1', t: 1, lane: 'top', x: 315, y: 76, maxHp: 3800 },
+  { id: 'b_t2', t: 1, lane: 'top', x: 605, y: 74, maxHp: 4400 },
+  { id: 'b_m1', t: 1, lane: 'mid', x: 635, y: 365, maxHp: 3800 },
+  { id: 'b_m2', t: 1, lane: 'mid', x: 752, y: 248, maxHp: 4400 },
+  { id: 'b_b1', t: 1, lane: 'bot', x: 920, y: 685, maxHp: 3800 },
+  { id: 'b_b2', t: 1, lane: 'bot', x: 920, y: 395, maxHp: 4400 },
+];
+
+// ================= UNIT TIERS & GIFT MAPPING =================
+const TIERS = {
+  soldier:         { name: 'Binh Lính',         hp: 260,  atk: 26,  spd: 68, range: 30, cd: 0.72, r: 16, pts: 15,   ranged: false },
+  archer:          { name: 'Cung Binh',         hp: 210,  atk: 34,  spd: 64, range: 96, cd: 0.85, r: 16, pts: 35,   ranged: true,  proj: 'arrow' },
+  dragonKnight:    { name: 'Kỵ Sĩ Rồng',        hp: 760,  atk: 74,  spd: 82, range: 44, cd: 0.65, r: 24, pts: 120,  ranged: false },
+  boneDragon:      { name: 'Rồng Xương',        hp: 1550, atk: 128, spd: 70, range: 112,cd: 0.90, r: 30, pts: 350,  ranged: true,  proj: 'flame', fly: true },
+  eagleDragonLord: { name: 'Bá Chủ Rồng Ưng',   hp: 3400, atk: 245, spd: 64, range: 128,cd: 0.95, r: 42, pts: 1000, ranged: true,  proj: 'goldfire', fly: true, lord: true },
+};
+
+const TIER_DEFAULT_ICON = {
+  soldier: 'img/game/gift_rose.webp',
+  archer: 'img/game/gift_rosa.webp',
+  dragonKnight: 'img/game/gift_doughnut.webp',
+  boneDragon: 'img/game/gift_cap.webp',
+  eagleDragonLord: 'img/game/gift_corgi.webp',
+};
+
+let GIFT_RULES = [
+  { id: 'gift_soldier', title: 'Triệu Binh', tier: 'soldier', count: 3, enabled: true, giftId: 5655, giftName: 'Rose', aliases: ['Hoa hồng'], diamondCount: 1, iconUrl: 'img/game/gift_rose.webp' },
+  { id: 'gift_archer', title: 'Triệu Cung Binh', tier: 'archer', count: 3, enabled: true, giftId: 8913, giftName: 'Rosa', aliases: ['Quà cấp 2', 'Kem', 'Tim'], diamondCount: 10, iconUrl: 'img/game/gift_rosa.webp' },
+  { id: 'gift_knight', title: 'Triệu hồi kỵ sĩ rồng', tier: 'dragonKnight', count: 1, enabled: true, giftId: 5879, giftName: 'Doughnut', aliases: ['Donut'], diamondCount: 30, iconUrl: 'img/game/gift_doughnut.webp' },
+  { id: 'gift_bonedragon', title: 'Triệu hồi rồng xương', tier: 'boneDragon', count: 1, enabled: true, giftId: 6104, giftName: 'Cap', aliases: ['Mũ'], diamondCount: 99, iconUrl: 'img/game/gift_cap.webp' },
+  { id: 'gift_lord', title: 'Triệu hồi bá chủ rồng ưng', tier: 'eagleDragonLord', count: 1, enabled: true, giftId: 6267, giftName: 'Corgi', aliases: [], diamondCount: 299, iconUrl: 'img/game/gift_corgi.webp' },
+];
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderGiftLegend() {
+  const el = $('giftRows');
+  if (!el || typeof el.innerHTML !== 'string') return;
+  const shown = GIFT_RULES.filter((r) => r.enabled && (r.giftId || r.giftName));
+  if (el.classList?.toggle) el.classList.toggle('compact', shown.length > 5);
+  if (shown.length === 0) {
+    el.innerHTML = '<div class="giftRow"><b>Chưa bật quà triệu hồi nào</b><small>Mở bảng điều khiển</small></div>';
+    return;
+  }
+  el.innerHTML = shown.map((r) => {
+    const icon = r.iconUrl || TIER_DEFAULT_ICON[r.tier] || 'img/game/gift_rose.webp';
+    const fb = TIER_DEFAULT_ICON[r.tier] || 'img/game/gift_rose.webp';
+    return `<div class="giftRow"><img src="${escHtml(icon)}" referrerpolicy="no-referrer" onerror="this.src='${fb}'" alt="${escHtml(r.giftName)}"><b>${escHtml(r.title)}</b><small>${escHtml(r.giftName || `${r.diamondCount} xu`)}</small></div>`;
+  }).join('');
+}
+
+function setGiftRules(next) {
+  if (!Array.isArray(next)) return;
+  GIFT_RULES = next.filter((r) => r && TIERS[r.tier]);
+  renderGiftLegend();
+}
+
+function toSummonOutcome(rule) {
+  const tier = TIERS[rule.tier] ? rule.tier : 'soldier';
+  const spec = TIERS[tier];
+  const big = !!(spec.lord || tier === 'boneDragon' || tier === 'dragonKnight');
+  return {
+    tier,
+    count: Math.max(1, Math.min(20, Number(rule.count) || 1)),
+    diamondCount: Math.max(1, Number(rule.diamondCount) || 1),
+    label: rule.title || spec.name,
+    unitName: spec.name,
+    big,
+    iconUrl: rule.iconUrl || TIER_DEFAULT_ICON[tier],
+  };
+}
+
+function resolveGift(giftName, coins, giftId) {
+  const g = String(giftName || '').trim().toLowerCase();
+  const gid = Number(giftId) || 0;
+
+  // 1. Khớp chính xác theo TikTok giftId
+  if (gid > 0) {
+    const byId = GIFT_RULES.find((r) => Number(r.giftId) === gid);
+    if (byId) return byId.enabled ? toSummonOutcome(byId) : { disabled: true };
+  }
+
+  // 2. Khớp chính xác theo tên quà hoặc bí danh tiếng Việt
+  if (g) {
+    const byName = GIFT_RULES.find((r) => {
+      if (!r.giftName && (!r.aliases || r.aliases.length === 0)) return false;
+      const gn = String(r.giftName || '').trim().toLowerCase();
+      if (gn && (gn === g || g.includes(gn) || gn.includes(g))) return true;
+      return Array.isArray(r.aliases) && r.aliases.some((a) => {
+        const al = String(a || '').trim().toLowerCase();
+        return al && (al === g || g.includes(al));
+      });
+    });
+    if (byName) return byName.enabled ? toSummonOutcome(byName) : { disabled: true };
+  }
+
+  // 3. Dự phòng theo mức xu nếu nhận quà lạ ngoài danh sách đã gán
+  const active = GIFT_RULES.filter((r) => r.enabled && (r.giftId || r.giftName)).sort((a, b) => (b.diamondCount || 0) - (a.diamondCount || 0));
+  if (active.length === 0) return { disabled: true };
+  const c = Math.max(0, Number(coins) || 0);
+  const byCoins = active.find((r) => (Number(r.diamondCount) || 0) <= c) || active[active.length - 1];
+  return toSummonOutcome(byCoins);
+}
+
+// ================= PAINTERLY MOBA TERRAIN CACHE =================
+const terrainCanvas = document.createElement('canvas');
+terrainCanvas.width = MAP_PX;
+terrainCanvas.height = MAP_PX;
+
+function paintTerrain() {
+  const g = terrainCanvas.getContext('2d');
+  const W = MAP_PX;
+
+  // 1. Lush emerald sunlit meadow base
+  const bg = g.createLinearGradient(0, 0, W, W);
+  bg.addColorStop(0, '#3e7f34');
+  bg.addColorStop(0.45, '#4b923a');
+  bg.addColorStop(0.55, '#3a7a31');
+  bg.addColorStop(1, '#2d6328');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, W, W);
+
+  // Subtle dappled foliage patches
+  let seed = 1337;
+  const rndS = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 420; i++) {
+    const x = rndS() * W, y = rndS() * W, r = 10 + rndS() * 34;
+    g.fillStyle = rndS() < 0.55 ? 'rgba(130, 215, 78, 0.08)' : 'rgba(14, 42, 18, 0.14)';
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+
+  // 2. Diagonal Shimmering River (top-left -> bottom-right)
+  g.save();
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const drawRiverPath = () => {
+    g.beginPath();
+    g.moveTo(-20, -20);
+    g.bezierCurveTo(210, 140, 260, 290, 340, 360);
+    g.bezierCurveTo(440, 445, 580, 570, 680, 670);
+    g.bezierCurveTo(790, 770, 910, 880, W + 30, W + 30);
+  };
+  // Sandy riverbank
+  drawRiverPath();
+  g.strokeStyle = '#6c754d';
+  g.lineWidth = 136;
+  g.stroke();
+  drawRiverPath();
+  g.strokeStyle = '#156778';
+  g.lineWidth = 112;
+  g.stroke();
+  drawRiverPath();
+  g.strokeStyle = '#249dad';
+  g.lineWidth = 82;
+  g.stroke();
+  drawRiverPath();
+  g.strokeStyle = '#4ad0d8';
+  g.lineWidth = 38;
+  g.stroke();
+  g.restore();
+
+  // 3. Three Sculpted Earthen & Cobble Lanes
+  const lanePaths = [
+    [[108, 892], [95, 680], [95, 420], [105, 165], [165, 105], [420, 95], [680, 95], [892, 108]],
+    [[108, 892], [350, 650], [500, 500], [650, 350], [892, 108]],
+    [[108, 892], [320, 905], [580, 905], [835, 895], [895, 835], [905, 580], [905, 320], [892, 108]],
+  ];
+  for (const pts of lanePaths) {
+    const trace = () => {
+      g.beginPath();
+      g.moveTo(pts[0][0] * SXY, pts[0][1] * SXY);
+      for (let i = 1; i < pts.length - 1; i++) {
+        const xc = (pts[i][0] + pts[i + 1][0]) * 0.5 * SXY;
+        const yc = (pts[i][1] + pts[i + 1][1]) * 0.5 * SXY;
+        g.quadraticCurveTo(pts[i][0] * SXY, pts[i][1] * SXY, xc, yc);
+      }
+      g.lineTo(pts[pts.length - 1][0] * SXY, pts[pts.length - 1][1] * SXY);
+    };
+    g.save();
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    trace(); g.strokeStyle = 'rgba(20, 42, 16, 0.55)'; g.lineWidth = 82; g.stroke();
+    trace(); g.strokeStyle = '#736544'; g.lineWidth = 70; g.stroke();
+    trace(); g.strokeStyle = '#9e8c60'; g.lineWidth = 52; g.stroke();
+    trace(); g.strokeStyle = '#bfb084'; g.lineWidth = 28; g.stroke();
+    g.restore();
+  }
+
+  // Cobble stone accents along lanes
+  for (let i = 0; i < 160; i++) {
+    const lane = lanePaths[i % 3];
+    const k = rndS();
+    const seg = Math.min(lane.length - 2, Math.floor(k * (lane.length - 1)));
+    const t = k * (lane.length - 1) - seg;
+    const x = (lane[seg][0] + (lane[seg + 1][0] - lane[seg][0]) * t) * SXY + (rndS() - 0.5) * 32;
+    const y = (lane[seg][1] + (lane[seg + 1][1] - lane[seg][1]) * t) * SXY + (rndS() - 0.5) * 32;
+    g.fillStyle = rndS() < 0.5 ? 'rgba(240, 232, 200, 0.25)' : 'rgba(62, 52, 34, 0.25)';
+    g.beginPath(); g.ellipse(x, y, 5 + rndS() * 6, 3 + rndS() * 4, rndS() * 3, 0, Math.PI * 2); g.fill();
+  }
+
+  // 4. Sculpted 3D Jungle Cliffs, Trees & Bushes (4 iconic MOBA jungle quadrants)
+  function drawCliffIsland(polys, trees) {
+    // Shadow
+    g.save();
+    g.translate(10, 14);
+    g.fillStyle = 'rgba(8, 18, 10, 0.55)';
+    for (const [cx, cy, rx, ry, rot] of polys) {
+      g.beginPath(); g.ellipse(cx * SXY, cy * SXY, rx * SXY, ry * SXY, rot, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+
+    // Stone wall skirt
+    g.save();
+    g.translate(0, 8);
+    g.fillStyle = '#2f3c33';
+    g.strokeStyle = '#141c17';
+    g.lineWidth = 3;
+    for (const [cx, cy, rx, ry, rot] of polys) {
+      g.beginPath(); g.ellipse(cx * SXY, cy * SXY, rx * SXY, ry * SXY, rot, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+    g.restore();
+
+    // Mossy upper cliff plateau
+    for (const [cx, cy, rx, ry, rot] of polys) {
+      const cg = g.createRadialGradient((cx - 12) * SXY, (cy - 12) * SXY, 6, cx * SXY, cy * SXY, rx * SXY);
+      cg.addColorStop(0, '#72c24b');
+      cg.addColorStop(0.7, '#3f832d');
+      cg.addColorStop(1, '#26531c');
+      g.fillStyle = cg;
+      g.strokeStyle = '#97db6a';
+      g.lineWidth = 2;
+      g.beginPath(); g.ellipse(cx * SXY, cy * SXY, rx * SXY, ry * SXY, rot, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+
+    // Layered Painted Trees & Boulders
+    for (const [tx, ty, tr] of trees) {
+      const px = tx * SXY, py = ty * SXY, rad = tr * SXY;
+      g.fillStyle = 'rgba(6, 16, 8, 0.45)';
+      g.beginPath(); g.arc(px + 5, py + 7, rad, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#1b4719';
+      g.beginPath(); g.arc(px, py, rad, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#2d7126';
+      g.beginPath(); g.arc(px - 2, py - 2, rad * 0.78, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#5bb342';
+      g.beginPath(); g.arc(px - 4, py - 4, rad * 0.45, 0, Math.PI * 2); g.fill();
+    }
+  }
+
+  // Top-left blue-side cliffs + Dragon wall
+  drawCliffIsland(
+    [[215, 225, 58, 36, 0.6], [190, 445, 44, 72, -0.2], [445, 190, 72, 42, 0.25], [275, 520, 46, 38, 0.8]],
+    [[210, 215, 19], [238, 240, 15], [185, 420, 18], [195, 465, 21], [435, 185, 20], [475, 195, 16], [275, 520, 18]],
+  );
+  // Bot-left Red jungle cliffs
+  drawCliffIsland(
+    [[240, 620, 38, 60, -0.4], [385, 760, 62, 36, 0.2], [535, 785, 52, 34, -0.15]],
+    [[240, 600, 17], [248, 645, 19], [375, 755, 21], [415, 765, 17], [535, 785, 18]],
+  );
+  // Top-right Blue jungle cliffs
+  drawCliffIsland(
+    [[465, 215, 52, 34, -0.15], [615, 240, 62, 36, 0.2], [760, 380, 38, 60, -0.4]],
+    [[465, 215, 18], [600, 240, 20], [645, 248, 17], [760, 365, 19], [755, 405, 17]],
+  );
+  // Bot-right Baron wall cliffs
+  drawCliffIsland(
+    [[785, 775, 58, 36, 0.6], [810, 555, 44, 72, -0.2], [555, 810, 72, 42, 0.25], [725, 480, 46, 38, 0.8]],
+    [[790, 785, 19], [762, 760, 15], [815, 540, 20], [805, 580, 17], [545, 805, 20], [585, 815, 16], [725, 480, 18]],
+  );
+
+  // 5. Boss Pits: DRAG (upper-left river) & BARON (lower-right river)
+  function drawBossPit(cxNorm, cyNorm, label, accent, rimCol) {
+    const cx = cxNorm * SXY, cy = cyNorm * SXY, R = 82;
+    g.save();
+    g.fillStyle = 'rgba(0, 0, 0, 0.52)';
+    g.beginPath(); g.arc(cx, cy, R + 6, 0, Math.PI * 2); g.fill();
+
+    const pg = g.createRadialGradient(cx, cy, 8, cx, cy, R);
+    pg.addColorStop(0, accent);
+    pg.addColorStop(0.65, '#191d2d');
+    pg.addColorStop(1, '#0e131e');
+    g.fillStyle = pg;
+    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+
+    // Stone crescent wall backing pit
+    g.strokeStyle = rimCol;
+    g.lineWidth = 7;
+    g.beginPath(); g.arc(cx, cy, R - 2, Math.PI * 0.85, Math.PI * 2.15); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.22)';
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(cx, cy, R * 0.68, 0, Math.PI * 2); g.stroke();
+
+    // Crisp stenciled pit name (DRAG / BARON like screenshot)
+    g.font = '900 32px "Be Vietnam Pro", sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineWidth = 6;
+    g.strokeStyle = 'rgba(10, 8, 22, 0.9)';
+    g.strokeText(label, cx, cy - 36);
+    g.fillStyle = '#e0e7ff';
+    g.fillText(label, cx, cy - 36);
+    g.restore();
+  }
+  drawBossPit(315, 315, 'DRAG', 'rgba(124, 58, 237, 0.48)', '#475569');
+  drawBossPit(685, 685, 'BARON', 'rgba(168, 85, 247, 0.45)', '#4c1d95');
+
+  // 6. Red & Blue Citadel Base Plazas
+  function drawBasePlaza(cxNorm, cyNorm, lightCol, darkCol, rim) {
+    const cx = cxNorm * SXY, cy = cyNorm * SXY;
+    g.save();
+    const bg2 = g.createRadialGradient(cx, cy, 12, cx, cy, 130);
+    bg2.addColorStop(0, lightCol);
+    bg2.addColorStop(0.55, darkCol);
+    bg2.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = bg2;
+    g.beginPath(); g.arc(cx, cy, 130, 0, Math.PI * 2); g.fill();
+
+    // Octagonal stone citadel floor
+    g.fillStyle = '#252b3b';
+    g.strokeStyle = rim;
+    g.lineWidth = 4;
+    g.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4 + Math.PI / 8;
+      const px = cx + Math.cos(a) * 86, py = cy + Math.sin(a) * 86;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.22)';
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(cx, cy, 52, 0, Math.PI * 2); g.stroke();
+    g.restore();
+  }
+  drawBasePlaza(128, 862, 'rgba(239, 68, 68, 0.55)', 'rgba(127, 29, 29, 0.45)', '#f87171');
+  drawBasePlaza(875, 130, 'rgba(56, 189, 248, 0.55)', 'rgba(12, 74, 110, 0.45)', '#38bdf8');
+}
+paintTerrain();
+
+// ================= 3D ILLUSTRATED ARENA MAP & HERO SPRITE ASSETS =================
+const TEX = {};
+const TEX_SRC = {
+  map: 'img/game/map_arena.jpg',
+  soldier_0: 'img/game/soldier_red.png',
+  soldier_1: 'img/game/soldier_blue.png',
+  archer_0: 'img/game/archer_red.png',
+  archer_1: 'img/game/archer_blue.png',
+  dragonKnight_0: 'img/game/knight_red.png',
+  dragonKnight_1: 'img/game/knight_blue.png',
+  boneDragon_0: 'img/game/bonedragon_red.png',
+  boneDragon_1: 'img/game/bonedragon_blue.png',
+  eagleDragonLord_0: 'img/game/eaglelord_red.png',
+  eagleDragonLord_1: 'img/game/eaglelord_blue.png',
+  turret_0: 'img/game/turret_red.png',
+  turret_1: 'img/game/turret_blue.png',
+  boss_drag: 'img/game/boss_drag.png',
+  boss_baron: 'img/game/boss_baron.png',
+};
+
+function drawPitLabelsOnTerrain(g) {
+  for (const [label, cxNorm, cyNorm, fillCol, glowCol] of [
+    ['DRAG', 338, 224, '#ede9fe', 'rgba(139, 92, 246, 0.9)'],
+    ['BARON', 665, 642, '#f5d0fe', 'rgba(168, 85, 247, 0.9)'],
+  ]) {
+    g.save();
+    g.font = '900 30px "Be Vietnam Pro", sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.shadowColor = glowCol;
+    g.shadowBlur = 12;
+    g.lineWidth = 6;
+    g.strokeStyle = 'rgba(16, 8, 32, 0.95)';
+    g.strokeText(label, cxNorm * SXY, cyNorm * SXY);
+    g.fillStyle = fillCol;
+    g.fillText(label, cxNorm * SXY, cyNorm * SXY);
+    g.restore();
+  }
+}
+
+for (const [key, src] of Object.entries(TEX_SRC)) {
+  const img = new Image();
+  const entry = { img, ready: false };
+  img.onload = () => {
+    entry.ready = true;
+    if (key === 'map') {
+      const g = terrainCanvas.getContext('2d');
+      g.imageSmoothingEnabled = true;
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(img, 0, 0, MAP_PX, MAP_PX);
+      drawPitLabelsOnTerrain(g);
+    }
+  };
+  img.src = src;
+  TEX[key] = entry;
+}
+
+const SPRITE_META = {
+  soldier:         { size: 48,  ax: -24, ay: -30, barY: -36 },
+  archer:          { size: 52,  ax: -26, ay: -32, barY: -40 },
+  dragonKnight:    { size: 84,  ax: -42, ay: -52, barY: -58 },
+  boneDragon:      { size: 110, ax: -55, ay: -62, barY: -66 },
+  eagleDragonLord: { size: 140, ax: -70, ay: -78, barY: -82 },
+};
+
+// ================= HIGH-DETAIL SPRITE PAINTER (BAKED OFF-SCREEN TEXTURES + ANIMATED PARTS) =================
+const SPRITES = {};
+function mkSprite(w, h, fn) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.translate(w / 2, h / 2);
+  fn(g, w, h);
+  return c;
+}
+
+function buildSprites() {
+  for (const t of [0, 1]) {
+    const main = t === 0 ? '#dc2626' : '#0284c7';
+    const hi = t === 0 ? '#fca5a5' : '#7dd3fc';
+    const dk = t === 0 ? '#7f1d1d' : '#0c4a6e';
+    const gold = '#fbbf24';
+
+    // 1. Armored Vanguard Soldier (helmet + pauldrons + shield + halberd/sword + flowing cape)
+    SPRITES[`soldier_${t}`] = mkSprite(96, 96, (g) => {
+      // Cast shadow
+      g.fillStyle = 'rgba(0,0,0,0.45)';
+      g.beginPath(); g.ellipse(0, 14, 19, 10, 0, 0, Math.PI * 2); g.fill();
+      // Flowing cloak behind
+      g.fillStyle = dk;
+      g.beginPath(); g.moveTo(-14, -4); g.lineTo(-28, 12); g.lineTo(-22, -16); g.closePath(); g.fill();
+      // Gleaming halberd/broadsword pointing +X (right)
+      g.fillStyle = '#94a3b8';
+      g.strokeStyle = '#0f172a';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(4, -14); g.lineTo(36, -12); g.lineTo(42, -9); g.lineTo(34, -5); g.lineTo(4, -8); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = gold;
+      g.fillRect(6, -16, 4, 12);
+      // Broad armored shoulders (pauldrons)
+      g.fillStyle = '#cbd5e1';
+      g.strokeStyle = '#1e293b';
+      g.lineWidth = 2.2;
+      g.beginPath(); g.ellipse(-2, 0, 15, 20, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      // Surcoat sash
+      g.fillStyle = main;
+      g.beginPath(); g.ellipse(-1, 0, 10, 15, 0, 0, Math.PI * 2); g.fill();
+      // Steel Knight Helm + Feather Plume
+      g.fillStyle = '#e2e8f0';
+      g.beginPath(); g.arc(2, 0, 11, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillStyle = '#0f172a';
+      g.fillRect(7, -6, 4, 12); // visor slit
+      g.fillStyle = main;
+      g.beginPath(); g.moveTo(-6, -2); g.quadraticCurveTo(-18, -10, -24, 0); g.quadraticCurveTo(-14, 4, -6, 2); g.fill();
+      // Crest Heater Shield held front-bottom
+      g.fillStyle = main;
+      g.strokeStyle = gold;
+      g.lineWidth = 2.4;
+      g.beginPath(); g.arc(8, 13, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillStyle = hi;
+      g.beginPath(); g.arc(8, 13, 4, 0, Math.PI * 2); g.fill();
+    });
+
+    // 2. Hooded Ranger Archer (quiver + green/team cloak + drawn bow + glowing arrow)
+    SPRITES[`archer_${t}`] = mkSprite(96, 96, (g) => {
+      g.fillStyle = 'rgba(0,0,0,0.42)';
+      g.beginPath(); g.ellipse(0, 14, 17, 9, 0, 0, Math.PI * 2); g.fill();
+      // Quiver of arrows on back
+      g.save();
+      g.rotate(-0.6);
+      g.fillStyle = '#78350f';
+      g.fillRect(-18, -10, 14, 7);
+      g.fillStyle = '#fde047';
+      g.fillRect(-21, -9, 3, 2);
+      g.fillRect(-21, -6, 3, 2);
+      g.restore();
+      // Cape
+      g.fillStyle = dk;
+      g.beginPath(); g.moveTo(-4, -15); g.lineTo(-25, 0); g.lineTo(-4, 15); g.closePath(); g.fill();
+      // Body tunic
+      g.fillStyle = main;
+      g.strokeStyle = '#0f172a';
+      g.lineWidth = 2;
+      g.beginPath(); g.ellipse(0, 0, 13, 16, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      // Hood
+      g.fillStyle = hi;
+      g.beginPath(); g.moveTo(12, 0); g.quadraticCurveTo(2, -13, -10, -6); g.quadraticCurveTo(-13, 0, -10, 6); g.quadraticCurveTo(2, 13, 12, 0); g.fill(); g.stroke();
+      // Recurve Bow + Glowing Arrow forward
+      g.strokeStyle = '#d97706';
+      g.lineWidth = 3.5;
+      g.beginPath(); g.arc(11, 0, 18, -1.1, 1.1); g.stroke();
+      g.strokeStyle = '#fff';
+      g.lineWidth = 1.3;
+      g.beginPath(); g.moveTo(19, -16); g.lineTo(13, 0); g.lineTo(19, 16); g.stroke();
+      g.strokeStyle = hi;
+      g.lineWidth = 2.6;
+      g.beginPath(); g.moveTo(13, 0); g.lineTo(36, 0); g.stroke();
+    });
+
+    // 3. Armored Dragon Knight (scaly drake mount + armored lancer knight)
+    SPRITES[`dragonKnight_${t}`] = mkSprite(128, 128, (g) => {
+      g.fillStyle = 'rgba(0,0,0,0.48)';
+      g.beginPath(); g.ellipse(-2, 18, 30, 16, 0, 0, Math.PI * 2); g.fill();
+      // Drake Tail with spines
+      g.fillStyle = dk;
+      g.strokeStyle = '#0f172a';
+      g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(-14, -4); g.quadraticCurveTo(-36, -12, -48, 2); g.quadraticCurveTo(-32, 8, -14, 6); g.closePath(); g.fill(); g.stroke();
+      // Muscular Drake Body + Scales
+      const bodyG = g.createRadialGradient(-2, -4, 4, 0, 0, 28);
+      bodyG.addColorStop(0, hi); bodyG.addColorStop(0.6, main); bodyG.addColorStop(1, dk);
+      g.fillStyle = bodyG;
+      g.beginPath(); g.ellipse(0, 0, 26, 17, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      // Small drake wings tucked slightly
+      g.fillStyle = 'rgba(255, 220, 140, 0.35)';
+      g.strokeStyle = gold;
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(-4, -14); g.lineTo(-24, -30); g.lineTo(-10, -6); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(-4, 14); g.lineTo(-24, 30); g.lineTo(-10, 6); g.closePath(); g.fill(); g.stroke();
+      // Drake Horned Head
+      g.fillStyle = main;
+      g.strokeStyle = '#111827';
+      g.beginPath(); g.moveTo(16, -9); g.lineTo(38, -4); g.lineTo(42, 0); g.lineTo(38, 4); g.lineTo(16, 9); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#fde047';
+      g.beginPath(); g.arc(31, -4, 2.5, 0, Math.PI * 2); g.arc(31, 4, 2.5, 0, Math.PI * 2); g.fill();
+      // Knight torso in gold armor + Pennant Lance
+      g.fillStyle = '#e2e8f0';
+      g.strokeStyle = gold;
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(-2, 0, 11, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillStyle = main;
+      g.beginPath(); g.arc(0, 0, 6.5, 0, Math.PI * 2); g.fill();
+      // Long jousting lance with pennant
+      g.strokeStyle = '#cbd5e1';
+      g.lineWidth = 4;
+      g.beginPath(); g.moveTo(-10, 12); g.lineTo(46, 10); g.stroke();
+      g.fillStyle = gold;
+      g.beginPath(); g.moveTo(42, 7); g.lineTo(56, 10); g.lineTo(42, 13); g.closePath(); g.fill();
+    });
+
+    // 4. Bone Dragon Body (animated wings drawn separately for live flap)
+    SPRITES[`boneDragon_body_${t}`] = mkSprite(140, 120, (g) => {
+      // Glowing core fire inside ribcage
+      const glow = g.createRadialGradient(0, 0, 2, 0, 0, 28);
+      glow.addColorStop(0, t === 0 ? '#fde047' : '#e0f2fe');
+      glow.addColorStop(0.5, t === 0 ? 'rgba(239,68,68,0.65)' : 'rgba(56,189,248,0.65)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = glow;
+      g.beginPath(); g.arc(0, 0, 28, 0, Math.PI * 2); g.fill();
+      // Ivory Spine & Tail
+      g.strokeStyle = '#e2e8f0';
+      g.lineWidth = 6;
+      g.lineCap = 'round';
+      g.beginPath(); g.moveTo(-54, 0); g.lineTo(22, 0); g.stroke();
+      g.fillStyle = '#cbd5e1';
+      for (let i = -36; i <= 10; i += 9) {
+        const rw = 16 - Math.abs(i + 6) * 0.28;
+        g.beginPath(); g.ellipse(i, 0, 3.5, Math.max(5, rw), 0, 0, Math.PI * 2); g.fill();
+      }
+      // Horned Dragon Skull
+      g.fillStyle = '#f8fafc';
+      g.strokeStyle = '#334155';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(14, -12); g.lineTo(44, -6); g.lineTo(48, 0); g.lineTo(44, 6); g.lineTo(14, 12); g.closePath(); g.fill(); g.stroke();
+      // Curved skeletal horns
+      g.strokeStyle = '#cbd5e1';
+      g.lineWidth = 4;
+      g.beginPath(); g.moveTo(16, -9); g.quadraticCurveTo(2, -20, -6, -15); g.stroke();
+      g.beginPath(); g.moveTo(16, 9); g.quadraticCurveTo(2, 20, -6, 15); g.stroke();
+      // Glowing eyes
+      g.fillStyle = t === 0 ? '#ef4444' : '#38bdf8';
+      g.beginPath(); g.arc(31, -4, 3, 0, Math.PI * 2); g.arc(31, 4, 3, 0, Math.PI * 2); g.fill();
+    });
+
+    SPRITES[`boneDragon_wing_${t}`] = mkSprite(120, 120, (g) => {
+      g.fillStyle = t === 0 ? 'rgba(185, 28, 28, 0.36)' : 'rgba(14, 165, 233, 0.36)';
+      g.strokeStyle = '#e2e8f0';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(-14, -46);
+      g.lineTo(-42, -32);
+      g.lineTo(-22, -16);
+      g.lineTo(-46, -10);
+      g.lineTo(-14, -2);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    });
+
+    // 5. Eagle Dragon Lord (Bá chủ Rồng Ưng - fierce golden armored sovereign + layered feathered wings)
+    SPRITES[`lord_body_${t}`] = mkSprite(180, 160, (g) => {
+      // Golden Tail Plumes
+      for (const ang of [-0.3, 0, 0.3]) {
+        g.save(); g.rotate(ang);
+        g.fillStyle = gold; g.strokeStyle = '#451a03'; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(-18, 0); g.quadraticCurveTo(-50, -10, -72, 0); g.quadraticCurveTo(-50, 10, -18, 0); g.fill(); g.stroke();
+        g.restore();
+      }
+      // Muscular Gilded Armor Torso
+      const tg = g.createRadialGradient(4, 0, 6, 0, 0, 36);
+      tg.addColorStop(0, '#fef08a'); tg.addColorStop(0.55, main); tg.addColorStop(1, dk);
+      g.fillStyle = tg;
+      g.strokeStyle = gold;
+      g.lineWidth = 3;
+      g.beginPath(); g.ellipse(0, 0, 34, 22, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      // Crowned Eagle-Dragon Crest Head
+      g.fillStyle = '#fffbeb';
+      g.strokeStyle = '#78350f';
+      g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(20, -14); g.lineTo(54, -6); g.lineTo(64, 0); g.lineTo(54, 6); g.lineTo(20, 14); g.closePath(); g.fill(); g.stroke();
+      // Sweep horns + crest crown
+      g.fillStyle = gold;
+      g.beginPath(); g.moveTo(22, -12); g.lineTo(-4, -28); g.lineTo(14, -8); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(22, 12); g.lineTo(-4, 28); g.lineTo(14, 8); g.closePath(); g.fill();
+      // Glowing eye & chest gem
+      g.fillStyle = t === 0 ? '#fde047' : '#38bdf8';
+      g.beginPath(); g.arc(42, -4, 3.5, 0, Math.PI * 2); g.arc(42, 4, 3.5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(8, 0, 7, 0, Math.PI * 2); g.fill();
+    });
+
+    SPRITES[`lord_wing_${t}`] = mkSprite(180, 180, (g) => {
+      // Feathered Primary & Secondary Wing Layers (pointing upward -Y so flipping covers top/bottom)
+      const wg = g.createLinearGradient(0, 0, -40, -78);
+      wg.addColorStop(0, '#fde047');
+      wg.addColorStop(0.5, main);
+      wg.addColorStop(1, '#fff3');
+      g.fillStyle = wg;
+      g.strokeStyle = gold;
+      g.lineWidth = 2.6;
+      g.beginPath();
+      g.moveTo(10, 0);
+      g.lineTo(-10, -76);
+      g.lineTo(-30, -64);
+      g.lineTo(-26, -54);
+      g.lineTo(-46, -46);
+      g.lineTo(-34, -34);
+      g.lineTo(-54, -26);
+      g.lineTo(-24, -10);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    });
+  }
+}
+buildSprites();
+
+// ================= BATTLE STATE & LOOP =================
+const bgCtx = $('bgFxCanvas').getContext('2d');
+const ctx = $('gameCanvas').getContext('2d');
+
+let matchLen = 1800; // Default 30 minutes
+let gameNow = 0;
+let tick = 0;
+let fpsFrames = 0;
+let fpsShown = 60;
+let S = null;
+
+function newMatch() {
+  if (S?.resultTimer) clearTimeout(S.resultTimer);
+  const nexusMax = 25000;
+  S = {
+    phase: 'fight',
+    time: matchLen,
+    round: 0,
+    hp: [nexusMax, nexusMax],
+    maxHp: nexusMax,
+    kills: [0, 0],
+    cmt: [0, 0],
+    heart: [0, 0],
+    heartNext: [600, 600],
+    totalScore: 0,
+    players: new Map(), // userId -> { id, name, spokenName, avatar, side, route, pts, diamonds }
+    units: [],
+    turrets: TURRET_SPOTS.map((sp) => ({
+      ...sp,
+      px: pt(sp.x, sp.y).x,
+      py: pt(sp.x, sp.y).y,
+      hp: sp.maxHp,
+      cd: 0,
+      target: null,
+      laser: 0,
+    })),
+    bosses: {
+      drag: { key: 'drag', name: 'Hỏa Long', x: BOSS_POS.drag.x, y: BOSS_POS.drag.y, hp: 9000, maxHp: 9000, cd: 0, respawnAt: 0, alive: true },
+      baron: { key: 'baron', name: 'Baron Hư Không', x: BOSS_POS.baron.x, y: BOSS_POS.baron.y, hp: 13000, maxHp: 13000, cd: 0, respawnAt: 0, alive: true },
+    },
+    buffUntil: { drag: [0, 0], baron: [0, 0] },
+    projectiles: [],
+    portals: [],
+    particles: [],
+    epicFx: [],
+    skyBeams: [],
+    bolts: [],
+    shake: 0,
+    flash: null,
+    stormBoost: 0,
+    tickers: [],
+    waveAt: 1.5,
+    resultTimer: null,
+  };
+  $('result').classList.remove('on');
+  addTicker('⚔️ Trận chiến bắt đầu! Comment 1 vào Đỏ, 2 vào Xanh!');
+  if (mc.speaker) mcSay('Trận đại chiến Long Ưng Chiến Trường bắt đầu! Anh em gõ 1 vào đội Đỏ, gõ 2 vào đội Xanh nha!', 3);
+  updateUI();
+}
+
+function addTicker(text) {
+  if (!S) return;
+  S.tickers.unshift(text);
+  if (S.tickers.length > 4) S.tickers.length = 4;
+}
+
+function toastBanner(text) {
+  const el = $('bossToast');
+  el.textContent = text;
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('on'), 2800);
+}
+
+function showSummonBanner(player, title, sub, coinTier = 0, totalCoins = 0) {
+  const el = $('summonBanner');
+  const av = $('sbAv');
+  if (player?.avatar) {
+    av.innerHTML = `<img src="${player.avatar}" alt="" onerror="this.remove()">`;
+  } else {
+    av.textContent = (player?.name || 'C').slice(0, 1).toUpperCase();
+  }
+  $('sbTitle').textContent = title;
+  $('sbSub').textContent = sub;
+  const coinEl = $('sbCoin');
+  if (coinEl) {
+    if (totalCoins > 0) {
+      coinEl.style.display = '';
+      coinEl.textContent = coinTier >= 4
+        ? `🪙 ${totalCoins.toLocaleString('vi-VN')} xu · SIÊU CẤP`
+        : `🪙 ${totalCoins.toLocaleString('vi-VN')} xu`;
+    } else {
+      coinEl.style.display = 'none';
+    }
+  }
+  if (el.classList?.remove) el.classList.remove('vfx1', 'vfx2', 'vfx3', 'vfx4', 'vfx5');
+  if (coinTier >= 1 && el.classList?.add) el.classList.add('vfx' + Math.min(5, coinTier));
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('on'), 3000 + Math.min(5, coinTier) * 520);
+}
+
+// Parse chat commands: 1, 2, top, mid, adc, bac, upatk, downatk (case/space insensitive)
+function parseChatCmd(raw) {
+  const clean = String(raw || '').replace(/１/g, '1').replace(/２/g, '2').trim().toLowerCase().replace(/\s+/g, ' ');
+  const out = { team: null, route: null };
+  if (/^1(?:\s|$|[^0-9])/.test(clean) && !/^1{2,}$/.test(clean.trim())) out.team = RED;
+  else if (/^2(?:\s|$|[^0-9])/.test(clean) && !/^2{2,}$/.test(clean.trim())) out.team = BLUE;
+  if (/\btop\b/.test(clean)) out.route = 'top';
+  else if (/\bmid\b/.test(clean)) out.route = 'mid';
+  else if (/\badc\b|\bbot\b/.test(clean)) out.route = 'bot';
+  else if (/\bbac\b|\bback\b/.test(clean)) out.route = 'bac';
+  else if (/\bupatk\b/.test(clean)) out.route = 'upatk';
+  else if (/\bdownatk\b/.test(clean)) out.route = 'downatk';
+  return out;
+}
+
+const LANE_SEQ = ['top', 'mid', 'bot'];
+function ensurePlayer(ev) {
+  const id = String(ev.user || ev.name || 'anon');
+  let p = S.players.get(id);
+  const name = safeName(ev.name || id);
+  const spokenName = ev.spokenName || name;
+  if (!p) {
+    const autoSide = S.cmt[RED] <= S.cmt[BLUE] ? RED : BLUE;
+    p = {
+      id,
+      name,
+      spokenName,
+      avatar: ev.avatar || '',
+      side: autoSide,
+      route: LANE_SEQ[S.players.size % 3],
+      pts: 0,
+      diamonds: 0,
+      joinedAt: gameNow,
+    };
+    S.players.set(id, p);
+  } else {
+    p.name = name;
+    if (ev.avatar) p.avatar = ev.avatar;
+  }
+  return p;
+}
+
+function spawnUnit(side, tierKey, route, owner, atPos) {
+  if (!S || S.phase !== 'fight' || S.units.length > 260) return null;
+  const spec = TIERS[tierKey];
+  const wps = ROUTE_PTS[side][route] || ROUTE_PTS[side].mid;
+  const start = atPos || { x: wps[0].x + (Math.random() - 0.5) * 28, y: wps[0].y + (Math.random() - 0.5) * 28 };
+  // Nearest waypoint to march towards
+  let bestIdx = 1;
+  let bestDist = Infinity;
+  for (let i = 1; i < wps.length; i++) {
+    const d = Math.hypot(wps[i].x - start.x, wps[i].y - start.y);
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  const u = {
+    id: Math.random().toString(36).slice(2),
+    t: side,
+    tier: tierKey,
+    spec,
+    ownerId: owner ? owner.id : null,
+    ownerName: owner && (spec.lord || tierKey === 'boneDragon' || tierKey === 'dragonKnight') ? owner.name : null,
+    route,
+    wpIdx: bestIdx,
+    x: start.x,
+    y: start.y,
+    vx: 0,
+    vy: 0,
+    ang: side === RED ? -Math.PI / 4 : (3 * Math.PI) / 4,
+    hp: spec.hp * (S.buffUntil.baron[side] > gameNow ? 1.25 : 1),
+    maxHp: spec.hp * (S.buffUntil.baron[side] > gameNow ? 1.25 : 1),
+    cd: Math.random() * 0.25,
+    ph: Math.random() * 6.28,
+    atkAnim: 0,
+    spawnFx: 0,
+    spawnFxCol: null,
+    dead: false,
+  };
+  S.units.push(u);
+  return u;
+}
+
+function openPortal(x, y, side, big) {
+  S.portals.push({ x, y, t: side, life: big ? 1.6 : 1.0, max: big ? 1.6 : 1.0, r: big ? 58 : 34 });
+  burst(x, y, side === RED ? '#fbbf24' : '#38bdf8', big ? 26 : 12, big ? 2.2 : 1.3);
+}
+
+function burst(x, y, col, n = 10, spd = 1.4) {
+  if (S.particles.length > 350) return;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = (30 + Math.random() * 90) * spd;
+    S.particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s,
+      r: 2 + Math.random() * 3.5,
+      col,
+      life: 0.35 + Math.random() * 0.4,
+      max: 0.75,
+    });
+  }
+}
+
+function getSummonPower(totalCoins, tier) {
+  const floorTier = tier === 'eagleDragonLord' ? 3 : tier === 'boneDragon' ? 2 : tier === 'dragonKnight' ? 1 : 0;
+  let coinLevel = 0;
+  if (totalCoins >= 2000) coinLevel = 5;
+  else if (totalCoins >= 700) coinLevel = 4;
+  else if (totalCoins >= 250) coinLevel = 3;
+  else if (totalCoins >= 90) coinLevel = 2;
+  else if (totalCoins >= 20) coinLevel = 1;
+  const level = Math.max(floorTier, coinLevel);
+  const scale = Math.min(2.3, 0.72 + Math.max(0, Math.log10(Math.max(10, totalCoins)) - 1.0) * 0.56);
+  return { level, scale };
+}
+
+function makeBoltPoints(x1, y1, x2, y2, segs = 6, jitter = 18) {
+  const pts = [{ x: x1, y: y1 }];
+  for (let i = 1; i < segs; i++) {
+    const t = i / segs;
+    pts.push({
+      x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * jitter,
+      y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * jitter * 0.45,
+    });
+  }
+  pts.push({ x: x2, y: y2 });
+  return pts;
+}
+
+function triggerEpicSummonFx(rally, side, tier, totalCoins, targetLane, units = []) {
+  if (!S) return { level: 0, scale: 1 };
+  const { level, scale } = getSummonPower(totalCoins, tier);
+  if (level <= 0) return { level: 0, scale: 1 };
+
+  const isRed = side === RED;
+  const theme = tier === 'eagleDragonLord'
+    ? { main: '#fde047', sub: '#fb923c', rgb: '253, 224, 71', core: '#fffbeb', sides: 8 }
+    : tier === 'boneDragon'
+      ? { main: '#38bdf8', sub: '#c084fc', rgb: '56, 189, 248', core: '#f0f9ff', sides: 6 }
+      : { main: isRed ? '#fb7185' : '#60a5fa', sub: '#fde047', rgb: isRed ? '251, 113, 133' : '96, 165, 250', core: '#ffffff', sides: 4 };
+
+  const dur = 1.65 + scale * 0.95;
+
+  // 1. Expanding Arcane Magic Rune Circle on battleground
+  S.epicFx.push({
+    kind: 'rune',
+    x: rally.x,
+    y: rally.y,
+    r: 68 * scale + level * 14,
+    sides: theme.sides,
+    col: theme.main,
+    sub: theme.sub,
+    rgb: theme.rgb,
+    spin: (isRed ? 1 : -1) * (1.2 + level * 0.25),
+    life: dur,
+    max: dur,
+  });
+
+  // 2. Staggered Shockwave Rings
+  const waveCount = Math.min(5, level);
+  for (let w = 0; w < waveCount; w++) {
+    const wDur = 0.72 + w * 0.18 + scale * 0.28;
+    const delay = w * 0.12;
+    S.epicFx.push({
+      kind: 'wave',
+      x: rally.x,
+      y: rally.y,
+      r: (118 + w * 56) * scale,
+      col: w % 2 === 0 ? theme.main : theme.sub,
+      rgb: theme.rgb,
+      lineW: Math.max(2, 4 + level * 1.4 - w * 0.55),
+      delay,
+      life: wDur + delay,
+      max: wDur,
+    });
+  }
+
+  // 3. Celestial Sky Beam + Helix Pillar (angles diagonally inward for Blue top-right citadel so it fills arena!)
+  S.skyBeams.push({
+    kind: 'beam',
+    x: rally.x,
+    y: rally.y,
+    tilt: isRed ? 0.1 : -2.28,
+    w: (18 + level * 7) * (0.85 + scale * 0.25),
+    h: 220 + scale * 165,
+    col: theme.main,
+    sub: theme.sub,
+    core: theme.core,
+    rgb: theme.rgb,
+    life: dur * 0.85,
+    max: dur * 0.85,
+  });
+
+  // 4. Rising Giant Spectral Hero / Dragon Crest Hologram
+  S.skyBeams.push({
+    kind: 'crest',
+    texKey: `${tier}_${side}`,
+    x: isRed ? rally.x + 12 : rally.x - 42,
+    y: isRed ? rally.y - 36 : rally.y + 46,
+    baseSize: (124 + level * 24) * scale,
+    flipX: !isRed,
+    col: theme.main,
+    rgb: theme.rgb,
+    life: dur * 0.92,
+    max: dur * 0.92,
+  });
+
+  // 5. Jagged Sky Lightning Strikes & Diagonal Meteors (scales up cleanly with xu)
+  const boltCount = level === 1 ? 2 : 2 + level * 2;
+  for (let i = 0; i < boltCount; i++) {
+    const tx = rally.x + (Math.random() - 0.5) * 95 * scale;
+    const ty = rally.y + (Math.random() - 0.5) * 65 * scale;
+    const skyX = isRed
+      ? tx + (Math.random() - 0.5) * 140
+      : Math.max(40, tx - (170 + scale * 110) + (Math.random() - 0.5) * 80);
+    const skyY = isRed
+      ? Math.max(-20, ty - (190 + scale * 130))
+      : Math.min(MAP_PX - 60, ty + (140 + scale * 90));
+    const bDur = 0.42 + scale * 0.15;
+    const bDelay = i * 0.08;
+    S.bolts.push({
+      kind: 'bolt',
+      pts: makeBoltPoints(skyX, skyY, tx, ty, 6 + level, 16 + level * 4),
+      col: i % 2 === 0 ? '#ffffff' : theme.main,
+      glow: theme.sub,
+      w: 2.2 + level * 0.65,
+      delay: bDelay,
+      life: bDur + bDelay,
+      max: bDur,
+    });
+  }
+
+  if (level >= 3) {
+    const wps = ROUTE_PTS[side][targetLane] || ROUTE_PTS[side].mid;
+    const aim = wps[Math.min(wps.length - 1, 1)] || rally;
+    const meteors = 2 + (level - 2) * 3;
+    for (let m = 0; m < meteors; m++) {
+      const mx = aim.x * 0.35 + rally.x * 0.65 + (Math.random() - 0.5) * 180 * scale;
+      const my = aim.y * 0.35 + rally.y * 0.65 + (Math.random() - 0.5) * 150 * scale;
+      const mDelay = m * 0.11;
+      S.bolts.push({
+        kind: 'meteor',
+        x0: isRed ? mx - 140 : Math.max(20, mx - 180),
+        y0: isRed ? my - 260 : Math.max(20, my - 120),
+        x1: mx,
+        y1: my,
+        r: 7 + level * 2.5,
+        col: m % 2 === 0 ? theme.main : '#fb923c',
+        delay: mDelay,
+        life: 0.55 + mDelay,
+        max: 0.55,
+      });
+    }
+  }
+
+  // 6. Camera Screen Shake + Edge Arena Flash + Outer Embers Surge
+  S.shake = Math.min(18, Math.max(S.shake || 0, 3 + level * 2.3 + scale * 2.4));
+  S.flash = {
+    rgb: theme.rgb,
+    alpha: Math.min(0.42, 0.12 + level * 0.055),
+    life: 0.55 + level * 0.14,
+    max: 0.55 + level * 0.14,
+  };
+  S.stormBoost = Math.max(S.stormBoost || 0, Math.min(4.5, 0.8 + level * 0.72));
+
+  // 7. Rich Radial Ember Explosion (higher cap for epic summons)
+  const spCount = Math.min(85, Math.round(18 * scale + level * 10));
+  for (let i = 0; i < spCount; i++) {
+    if (S.particles.length >= 520) break;
+    const a = (i / spCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+    const spd = (55 + Math.random() * 145) * scale;
+    S.particles.push({
+      x: rally.x,
+      y: rally.y,
+      vx: Math.cos(a) * spd,
+      vy: Math.sin(a) * spd - 24 * Math.random(),
+      r: 2.5 + Math.random() * (2.5 + level * 0.8),
+      col: i % 3 === 0 ? '#ffffff' : i % 2 === 0 ? theme.main : theme.sub,
+      life: 0.55 + Math.random() * 0.65 * scale,
+      max: 0.65 * scale + 0.5,
+    });
+  }
+
+  // 8. Persistent aura on newly summoned heroes so they blaze down the lane
+  for (const u of units) {
+    if (u) {
+      u.spawnFx = 3.2 + scale * 2.1;
+      u.spawnFxCol = theme.main;
+    }
+  }
+
+  return { level, scale };
+}
+
+// ================= EVENT HANDLERS (CALLED BY SSE OR TEST PANEL) =================
+function onComment(ev) {
+  if (!S) return { side: null, joined: false };
+  const cmd = parseChatCmd(ev.text);
+  const had = S.players.has(String(ev.user || ev.name || 'anon'));
+  const p = ensurePlayer(ev);
+
+  if (cmd.team !== null && cmd.team !== p.side) {
+    p.side = cmd.team;
+  }
+  if (cmd.route) {
+    p.route = cmd.route;
+    // Redirect player's existing active units to new command route!
+    for (const u of S.units) {
+      if (u.ownerId === p.id && !u.dead) {
+        u.route = cmd.route;
+        const wps = ROUTE_PTS[p.side][u.route] || ROUTE_PTS[p.side].mid;
+        u.wpIdx = Math.min(wps.length - 1, 1);
+      }
+    }
+  }
+
+  // IMPORTANT: ALWAYS count every comment into S.cmt[p.side] so 200-comment audit matches 100%
+  S.cmt[p.side]++;
+  p.pts += 10;
+  S.totalScore += 10;
+
+  if (S.phase === 'fight') {
+    const spawnSoldier = cmd.team !== null || cmd.route !== null || Math.random() < 0.55;
+    if (spawnSoldier) {
+      spawnUnit(p.side, 'soldier', p.route, p);
+      if (!had) {
+        const base = NEXUS_POS[p.side];
+        openPortal(base.x + (Math.random() - 0.5) * 40, base.y + (Math.random() - 0.5) * 40, p.side, false);
+        addTicker(`${p.side === RED ? '🔴' : '🔵'} ${p.name} gia nhập · đường ${p.route.toUpperCase()}`);
+      } else if (cmd.route) {
+        addTicker(`${p.side === RED ? '🔴' : '🔵'} ${p.name} điều quân -> ${cmd.route.toUpperCase()}`);
+      }
+    }
+  }
+  return { side: p.side, joined: !had };
+}
+
+function onGift(ev) {
+  if (!S || S.phase !== 'fight') return;
+  const res = resolveGift(ev.giftName, ev.coins, ev.giftId);
+  if (!res || res.disabled) return;
+  const p = ensurePlayer(ev);
+  const repeat = Math.max(1, Math.min(20, Number(ev.count) || 1));
+  const coins = Math.max(1, Number(ev.coins) || res.diamondCount || 1);
+  const totalCoins = coins * repeat;
+  p.diamonds += totalCoins;
+  p.pts += totalCoins * 25;
+  S.totalScore += totalCoins * 25;
+
+  const base = NEXUS_POS[p.side];
+  const rally = {
+    x: base.x + (p.side === RED ? 55 : -55) + (Math.random() - 0.5) * 45,
+    y: base.y + (p.side === RED ? -55 : 55) + (Math.random() - 0.5) * 45,
+  };
+  openPortal(rally.x, rally.y, p.side, res.big);
+
+  const totalUnits = Math.min(18, res.count * repeat);
+  const summoned = [];
+  for (let i = 0; i < totalUnits; i++) {
+    const lane = p.route || LANE_SEQ[i % 3];
+    const unit = spawnUnit(p.side, res.tier, lane, p, {
+      x: rally.x + (Math.random() - 0.5) * 46,
+      y: rally.y + (Math.random() - 0.5) * 46,
+    });
+    if (unit) summoned.push(unit);
+  }
+
+  const isHeroTier = res.tier === 'dragonKnight' || res.tier === 'boneDragon' || res.tier === 'eagleDragonLord';
+  let vfx = { level: 0, scale: 1 };
+  if (isHeroTier || totalCoins >= 20) {
+    vfx = triggerEpicSummonFx(rally, p.side, res.tier, totalCoins, p.route || 'mid', summoned);
+  }
+
+  sfx(res.tier === 'eagleDragonLord' || totalCoins >= 250 ? 'lord' : res.tier === 'boneDragon' || totalCoins >= 90 ? 'dragon' : 'portal');
+  if (totalCoins >= 700) setTimeout(() => sfx('boss'), 140);
+
+  const unitLabel = res.unitName || res.label;
+  addTicker(`✨ ${p.name} tặng ${ev.giftName} x${repeat} (${totalCoins.toLocaleString('vi-VN')} xu) · ${totalUnits} ${unitLabel}!`);
+
+  if (res.big || totalCoins >= 20) {
+    showSummonBanner(p, `${p.name} · ${res.label.toUpperCase()}!`, `Đội ${TEAM_LABEL[p.side]} · Cổng không gian xuất kích!`, vfx.level, totalCoins);
+    if (res.big) {
+      mcSay(`Tuyệt vời! ${p.spokenName} vừa thả ${ev.giftName}, mở cổng không gian triệu hồi ${unitLabel} cho đội ${TEAM_LABEL[p.side]}!`, totalCoins >= 700 ? 4 : 3);
+    }
+  }
+}
+
+function onLike(ev) {
+  if (!S || S.phase !== 'fight') return;
+  const p = ensurePlayer(ev);
+  const cnt = Math.max(1, Number(ev.count) || 1);
+  const t = p.side;
+  S.heart[t] += cnt;
+  p.pts += Math.min(50, cnt);
+  S.totalScore += Math.min(50, cnt);
+  if (S.heart[t] >= S.heartNext[t]) {
+    S.heartNext[t] += 600;
+    for (let i = 0; i < 3; i++) spawnUnit(t, 'archer', LANE_SEQ[i], p);
+    openPortal(NEXUS_POS[t].x, NEXUS_POS[t].y, t, false);
+    addTicker(`❤️ Đội ${TEAM_LABEL[t]} đạt mốc tim! Tiếp viện 3 Cung Binh!`);
+    sfx('portal');
+  }
+}
+
+function onSimple(type, ev) {
+  if (!S || S.phase !== 'fight') return;
+  const p = ensurePlayer(ev);
+  if (type === 'share' || type === 'follow') {
+    p.pts += 25;
+    spawnUnit(p.side, 'soldier', p.route, p);
+  }
+}
+
+// ================= SIMULATION STEP (60 FPS) =================
+function dist(ax, ay, bx, by) { return Math.hypot(bx - ax, by - ay); }
+
+function getEnemiesForUnit(u) {
+  const foes = [];
+  for (const o of S.units) if (!o.dead && o.t !== u.t) foes.push({ kind: 'unit', ref: o, x: o.x, y: o.y, r: o.spec.r });
+  for (const tr of S.turrets) if (tr.hp > 0 && tr.t !== u.t) foes.push({ kind: 'turret', ref: tr, x: tr.px, y: tr.py, r: 24 });
+  const foeT = 1 - u.t;
+  foes.push({ kind: 'nexus', ref: foeT, x: NEXUS_POS[foeT].x, y: NEXUS_POS[foeT].y, r: 38 });
+  if (u.route === 'upatk' && S.bosses.drag.alive) {
+    foes.push({ kind: 'boss', ref: S.bosses.drag, x: S.bosses.drag.x, y: S.bosses.drag.y, r: 36 });
+  }
+  if (u.route === 'downatk' && S.bosses.baron.alive) {
+    foes.push({ kind: 'boss', ref: S.bosses.baron, x: S.bosses.baron.x, y: S.bosses.baron.y, r: 38 });
+  }
+  return foes;
+}
+
+function applyDamage(attackerSide, attackerOwnerId, target, dmg) {
+  if (target.kind === 'unit') {
+    const o = target.ref;
+    o.hp -= dmg;
+    if (o.hp <= 0 && !o.dead) {
+      o.dead = true;
+      S.kills[attackerSide]++;
+      if (attackerOwnerId && S.players.has(attackerOwnerId)) {
+        const pl = S.players.get(attackerOwnerId);
+        pl.pts += o.spec.pts;
+        S.totalScore += o.spec.pts;
+      }
+      burst(o.x, o.y, TEAM_COL[o.t], 6, 0.9);
+    }
+  } else if (target.kind === 'turret') {
+    const tr = target.ref;
+    tr.hp = Math.max(0, tr.hp - dmg);
+    if (tr.hp <= 0) {
+      sfx('turret');
+      burst(tr.px, tr.py, '#fbbf24', 32, 2.2);
+      toastBanner(`💥 Trụ ${tr.lane.toUpperCase()} đội ${TEAM_LABEL[tr.t]} bị phá hủy!`);
+      addTicker(`💥 Phá trụ ${tr.lane.toUpperCase()} đội ${TEAM_LABEL[tr.t]}!`);
+      if (mc.speaker) mcSay(`Quá gắt! Trụ đường ${tr.lane} của đội ${TEAM_LABEL[tr.t]} vừa nổ tung!`, 2);
+    }
+  } else if (target.kind === 'nexus') {
+    const side = target.ref;
+    S.hp[side] = Math.max(0, S.hp[side] - dmg);
+    if (attackerOwnerId && S.players.has(attackerOwnerId)) S.players.get(attackerOwnerId).pts += Math.round(dmg * 0.4);
+    if (S.hp[side] <= 0 && S.phase === 'fight') endMatch(1 - side);
+  } else if (target.kind === 'boss') {
+    const b = target.ref;
+    if (!b.alive) return;
+    b.hp -= dmg;
+    if (b.hp <= 0) {
+      b.alive = false;
+      b.hp = 0;
+      b.respawnAt = gameNow + 95;
+      S.buffUntil[b.key][attackerSide] = gameNow + 60;
+      sfx('boss');
+      burst(b.x, b.y, '#c084fc', 36, 2.4);
+      toastBanner(`🐉 Đội ${TEAM_LABEL[attackerSide]} hạ gục ${b.name}! (+Tăng Công 60s)`);
+      addTicker(`🏆 Đội ${TEAM_LABEL[attackerSide]} ăn thành công ${b.name}!`);
+      mcSay(`Đội ${TEAM_LABEL[attackerSide]} vừa hạ gục ${b.name}! Sức mạnh toàn quân tăng vọt trong 60 giây!`, 3);
+      // Redirect attackers back to Mid after claiming boss
+      for (const u of S.units) {
+        if (u.t === attackerSide && (u.route === 'upatk' || u.route === 'downatk')) u.route = 'mid';
+      }
+    }
+  }
+}
+
+function step(dt) {
+  gameNow += dt;
+  tick++;
+  if (!S || S.phase !== 'fight') return;
+
+  // Periodic minion waves every 7s across 3 lanes so arena is always lively
+  if (gameNow >= S.waveAt) {
+    S.waveAt = gameNow + 7;
+    for (const lane of LANE_SEQ) {
+      spawnUnit(RED, 'soldier', lane, null);
+      spawnUnit(BLUE, 'soldier', lane, null);
+    }
+  }
+
+  // Boss respawns & pit attacks
+  for (const key of ['drag', 'baron']) {
+    const b = S.bosses[key];
+    if (!b.alive && b.respawnAt && gameNow >= b.respawnAt) {
+      b.alive = true;
+      b.hp = b.maxHp;
+      toastBanner(`⚡ ${b.name} đã tái sinh trong hang!`);
+    }
+    if (b.alive) {
+      b.cd -= dt;
+      if (b.cd <= 0) {
+        const foe = S.units.find((u) => !u.dead && dist(u.x, u.y, b.x, b.y) < 110);
+        if (foe) {
+          b.cd = 1.4;
+          foe.hp -= key === 'drag' ? 90 : 125;
+          burst(foe.x, foe.y, key === 'drag' ? '#fb923c' : '#c084fc', 6, 1.0);
+          if (foe.hp <= 0) foe.dead = true;
+        }
+      }
+    }
+  }
+
+  // Units move + acquire target
+  for (const u of S.units) {
+    if (u.dead) continue;
+    u.cd -= dt;
+    if (u.atkAnim > 0) u.atkAnim -= dt;
+
+    // Acquire nearest foe in awareness radius
+    const foes = getEnemiesForUnit(u);
+    let best = null;
+    let bestD = Infinity;
+    const sight = u.spec.range + 95;
+    for (const f of foes) {
+      const d = dist(u.x, u.y, f.x, f.y) - f.r;
+      if (d < sight && d < bestD) { best = f; bestD = d; }
+    }
+
+    const dragMult = S.buffUntil.drag[u.t] > gameNow ? 1.3 : 1;
+    const baronMult = S.buffUntil.baron[u.t] > gameNow ? 1.25 : 1;
+    const dmg = u.spec.atk * dragMult * baronMult;
+
+    if (best && bestD <= u.spec.range) {
+      // Attack in range
+      u.ang = Math.atan2(best.y - u.y, best.x - u.x);
+      if (u.cd <= 0) {
+        u.cd = u.spec.cd;
+        u.atkAnim = 0.22;
+        if (u.spec.ranged) {
+          S.projectiles.push({
+            x: u.x, y: u.y, tx: best.x, ty: best.y,
+            target: best, t: u.t, ownerId: u.ownerId,
+            dmg, kind: u.spec.proj, spd: 340, dead: false,
+          });
+          if (Math.random() < 0.14) sfx(u.spec.proj === 'arrow' ? 'arrow' : 'sword');
+        } else {
+          applyDamage(u.t, u.ownerId, best, dmg);
+          if (Math.random() < 0.14) sfx('sword');
+        }
+      }
+    } else if (best && bestD < sight) {
+      // Chase target slightly off path
+      const a = Math.atan2(best.y - u.y, best.x - u.x);
+      u.ang = a;
+      u.x += Math.cos(a) * u.spec.spd * dt;
+      u.y += Math.sin(a) * u.spec.spd * dt;
+    } else {
+      // Follow waypoint path cleanly
+      const wps = ROUTE_PTS[u.t][u.route] || ROUTE_PTS[u.t].mid;
+      const wp = wps[Math.min(u.wpIdx, wps.length - 1)];
+      const dx = wp.x - u.x, dy = wp.y - u.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 18 && u.wpIdx < wps.length - 1) u.wpIdx++;
+      else if (d > 2) {
+        const a = Math.atan2(dy, dx);
+        u.ang = a;
+        u.x += Math.cos(a) * u.spec.spd * dt;
+        u.y += Math.sin(a) * u.spec.spd * dt;
+      }
+    }
+  }
+
+  // Soft separation so crowds look cohesive rather than stacked on 1 pixel
+  for (let i = 0; i < S.units.length; i++) {
+    const a = S.units[i];
+    if (a.dead) continue;
+    for (let j = i + 1; j < S.units.length; j++) {
+      const b = S.units[j];
+      if (b.dead) continue;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const minD = (a.spec.r + b.spec.r) * 0.55;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 0.1 && d2 < minD * minD) {
+        const d = Math.sqrt(d2), push = (minD - d) * 0.22;
+        const nx = dx / d, ny = dy / d;
+        a.x -= nx * push; a.y -= ny * push;
+        b.x += nx * push; b.y += ny * push;
+      }
+    }
+  }
+  S.units = S.units.filter((u) => !u.dead);
+
+  // Turrets target nearest enemy unit
+  for (const tr of S.turrets) {
+    if (tr.hp <= 0) continue;
+    tr.cd -= dt;
+    if (tr.laser > 0) tr.laser -= dt;
+    if (tr.cd <= 0) {
+      let pick = null, minD = 128;
+      for (const u of S.units) {
+        if (!u.dead && u.t !== tr.t) {
+          const d = dist(u.x, u.y, tr.px, tr.py);
+          if (d < minD) { minD = d; pick = u; }
+        }
+      }
+      if (pick) {
+        tr.cd = 0.85;
+        tr.laser = 0.2;
+        tr.tx = pick.x; tr.ty = pick.y;
+        applyDamage(tr.t, null, { kind: 'unit', ref: pick }, 155);
+      }
+    }
+  }
+
+  // Projectiles
+  for (const pr of S.projectiles) {
+    if (pr.dead) continue;
+    const tx = pr.target.kind === 'unit' && !pr.target.ref.dead ? pr.target.ref.x : pr.tx;
+    const ty = pr.target.kind === 'unit' && !pr.target.ref.dead ? pr.target.ref.y : pr.ty;
+    const dx = tx - pr.x, dy = ty - pr.y;
+    const d = Math.hypot(dx, dy);
+    if (d < pr.spd * dt + 8) {
+      pr.dead = true;
+      if (pr.target.kind !== 'unit' || !pr.target.ref.dead) {
+        applyDamage(pr.t, pr.ownerId, pr.target, pr.dmg);
+      }
+      burst(tx, ty, pr.kind === 'goldfire' ? '#fde047' : TEAM_COL[pr.t], pr.kind === 'goldfire' ? 8 : 4, 0.9);
+    } else {
+      pr.x += (dx / d) * pr.spd * dt;
+      pr.y += (dy / d) * pr.spd * dt;
+      pr.ang = Math.atan2(dy, dx);
+    }
+  }
+  S.projectiles = S.projectiles.filter((p) => !p.dead);
+
+  // Portals, Particles & Epic Summon VFX
+  for (const u of S.units) {
+    if (u.spawnFx > 0) {
+      u.spawnFx = Math.max(0, u.spawnFx - dt);
+      if (Math.random() < 0.35 && S.particles.length < 480) {
+        S.particles.push({
+          x: u.x + (Math.random() - 0.5) * u.spec.r,
+          y: u.y + (Math.random() - 0.5) * 14,
+          vx: (Math.random() - 0.5) * 28,
+          vy: -22 - Math.random() * 35,
+          r: 2 + Math.random() * 2.5,
+          col: u.spawnFxCol || '#fde047',
+          life: 0.45,
+          max: 0.45,
+        });
+      }
+    }
+  }
+  for (const p of S.portals) p.life -= dt;
+  S.portals = S.portals.filter((p) => p.life > 0);
+  for (const fx of S.epicFx) fx.life -= dt;
+  S.epicFx = S.epicFx.filter((fx) => fx.life > 0);
+  for (const sb of S.skyBeams) sb.life -= dt;
+  S.skyBeams = S.skyBeams.filter((sb) => sb.life > 0);
+  for (const b of S.bolts) b.life -= dt;
+  S.bolts = S.bolts.filter((b) => b.life > 0);
+  if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 16);
+  if (S.stormBoost > 0) S.stormBoost = Math.max(0, S.stormBoost - dt * 0.9);
+  if (S.flash) {
+    S.flash.life -= dt;
+    if (S.flash.life <= 0) S.flash = null;
+  }
+  for (const ptc of S.particles) { ptc.x += ptc.vx * dt; ptc.y += ptc.vy * dt; ptc.vx *= 0.94; ptc.vy *= 0.94; ptc.life -= dt; }
+  S.particles = S.particles.filter((p) => p.life > 0);
+
+  // Clock countdown
+  S.time -= dt;
+  if (S.time <= 0) {
+    S.time = 0;
+    const winSide = S.hp[RED] >= S.hp[BLUE] ? RED : BLUE;
+    endMatch(winSide);
+  }
+}
+
+function endMatch(winSide) {
+  S.phase = 'result';
+  sfx('win');
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => burst(NEXUS_POS[1 - winSide].x + (Math.random() - 0.5) * 90, NEXUS_POS[1 - winSide].y + (Math.random() - 0.5) * 90, '#fde047', 40, 2.5), i * 250);
+  }
+  const mvp = (t) => [...S.players.values()].filter((p) => p.side === t).sort((a, b) => b.pts - a.pts)[0];
+  const rEl = $('result');
+  rEl.querySelector('.w').textContent = `ĐỘI ${TEAM_LABEL[winSide].toUpperCase()} CHIẾN THẮNG!`;
+  rEl.querySelector('.w').style.color = TEAM_COL[winSide];
+  const lines = [RED, BLUE].map((t) => mvp(t) ? `Top 1 Đội ${TEAM_LABEL[t]}: ${mvp(t).name} (${mvp(t).pts}đ)` : '').filter(Boolean);
+  rEl.querySelector('.m').innerHTML = lines.map((l) => `<div>${l}</div>`).join('');
+  rEl.classList.add('on');
+  mcSay(`Chúc mừng đội ${TEAM_LABEL[winSide]} đã phá hủy nhà chính và giành chiến thắng chung cuộc!`, 4);
+  let left = 10;
+  const countdown = () => {
+    rEl.querySelector('.s').textContent = `Trận mới sau ${left} giây · gõ 1 hoặc 2 để chọn phe`;
+    if (left-- <= 0) newMatch();
+    else S.resultTimer = setTimeout(countdown, 1000);
+  };
+  countdown();
+}
+
+// ================= RENDERING (60 FPS) =================
+const embers = Array.from({ length: 42 }, () => ({
+  x: Math.random() * 1080,
+  y: Math.random() * 1920,
+  vx: (Math.random() - 0.5) * 18,
+  vy: -20 - Math.random() * 40,
+  r: 1.5 + Math.random() * 3,
+  ice: Math.random() < 0.38,
+}));
+
+function render(nowSec) {
+  // 1. Floating stage background embers (surges dynamically on epic xu summons!)
+  const storm = S?.stormBoost || 0;
+  const spdMul = 1 + storm * 1.15;
+  bgCtx.clearRect(0, 0, 1080, 1920);
+  for (const e of embers) {
+    e.x += e.vx * 0.016 * spdMul;
+    e.y += e.vy * 0.016 * spdMul;
+    if (e.y < -10) { e.y = 1930; e.x = Math.random() * 1080; }
+    const alpha = Math.min(0.95, (e.ice ? 0.5 : 0.55) + storm * 0.12);
+    bgCtx.fillStyle = storm > 0.6 && !e.ice
+      ? `rgba(253, 224, 71, ${alpha})`
+      : (e.ice ? `rgba(125, 211, 252, ${alpha})` : `rgba(251, 146, 60, ${alpha})`);
+    bgCtx.beginPath(); bgCtx.arc(e.x, e.y, e.r * (1 + Math.min(0.85, storm * 0.2)), 0, Math.PI * 2); bgCtx.fill();
+  }
+
+  if (!S) return;
+  // Arena camera shake on heavy coin summons (slight zoom prevents edge exposure)
+  ctx.save();
+  if ((S.shake || 0) > 0.15) {
+    const sx = (Math.random() - 0.5) * S.shake * 2;
+    const sy = (Math.random() - 0.5) * S.shake * 2;
+    ctx.translate(MAP_PX / 2 + sx, MAP_PX / 2 + sy);
+    ctx.scale(1.024, 1.024);
+    ctx.translate(-MAP_PX / 2, -MAP_PX / 2);
+  }
+
+  // 2. Blit pre-painted fantasy MOBA terrain
+  ctx.drawImage(terrainCanvas, 0, 0);
+
+  // 3. Animated River Shimmer Waves (stays within diagonal river excluding mid bridge)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(186, 255, 255, 0.28)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 12; i++) {
+    const t = ((i / 12) + nowSec * 0.035) % 1;
+    const p = 0.20 + t * 0.60;
+    if (p > 0.46 && p < 0.54) continue;
+    const rx = p * MAP_PX + Math.sin(nowSec * 2.1 + i) * 18;
+    const ry = p * MAP_PX - Math.sin(nowSec * 2.1 + i) * 18;
+    ctx.beginPath(); ctx.moveTo(rx - 12, ry - 12); ctx.lineTo(rx + 12, ry + 12); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 4. Dimensional Summoning Portals
+  for (const p of S.portals) {
+    const k = p.life / p.max;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(nowSec * 4.5);
+    const col = p.t === RED ? '248, 113, 113' : '56, 189, 248';
+    const pg = ctx.createRadialGradient(0, 0, 4, 0, 0, p.r);
+    pg.addColorStop(0, `rgba(255, 250, 200, ${0.85 * k})`);
+    pg.addColorStop(0.5, `rgba(${col}, ${0.55 * k})`);
+    pg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = pg;
+    ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(253, 224, 71, ${0.9 * k})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath(); ctx.arc(0, 0, p.r * 0.72, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 4b. Epic Ground Rune Magic Circles & Staggered Shockwaves
+  for (const fx of (S.epicFx || [])) {
+    if (fx.delay && fx.life > fx.max) continue;
+    const prog = 1 - Math.max(0, Math.min(1, fx.life / fx.max));
+    const fade = Math.min(1, (fx.life / fx.max) * 2.2) * (fx.kind === 'rune' ? Math.min(1, prog * 5) : 1);
+    ctx.save();
+    ctx.translate(fx.x, fx.y);
+    ctx.globalCompositeOperation = 'lighter';
+    if (fx.kind === 'rune') {
+      const rr = fx.r * (0.45 + 0.55 * Math.min(1, prog * 3.5));
+      const rg = ctx.createRadialGradient(0, 0, 4, 0, 0, rr);
+      rg.addColorStop(0, `rgba(255, 255, 255, ${0.42 * fade})`);
+      rg.addColorStop(0.42, `rgba(${fx.rgb}, ${0.32 * fade})`);
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.ellipse(0, 0, rr, rr * 0.72, 0, 0, Math.PI * 2); ctx.fill();
+
+      ctx.scale(1, 0.72);
+      ctx.save();
+      ctx.rotate(nowSec * fx.spin);
+      ctx.strokeStyle = fx.col;
+      ctx.globalAlpha = 0.88 * fade;
+      ctx.lineWidth = 3.2;
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([12, 8]);
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(0, 0, rr * 0.82, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = fx.sub;
+      ctx.lineWidth = 2.4;
+      const n = fx.sides || 6;
+      const step = n >= 8 ? 3 : n === 6 ? 2 : 1;
+      for (let g = 0; g < (n === 6 ? 2 : 1); g++) {
+        const off = g * (Math.PI / 6);
+        ctx.beginPath();
+        for (let k = 0; k <= n; k++) {
+          const ang = off + (k * step * Math.PI * 2) / n;
+          const px = Math.cos(ang) * rr * 0.78;
+          const py = Math.sin(ang) * rr * 0.78;
+          if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.rotate(-nowSec * fx.spin * 1.4);
+      ctx.strokeStyle = fx.sub;
+      ctx.globalAlpha = 0.72 * fade;
+      ctx.lineWidth = 3.6;
+      ctx.setLineDash([4, 14]);
+      ctx.beginPath(); ctx.arc(0, 0, rr * 1.09, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (fx.kind === 'wave') {
+      const wr = 18 + fx.r * Math.pow(prog, 0.72);
+      ctx.scale(1, 0.74);
+      ctx.globalAlpha = Math.max(0, (1 - prog) * 0.92);
+      ctx.strokeStyle = fx.col;
+      ctx.lineWidth = Math.max(1.5, fx.lineW * (1 - prog * 0.6));
+      ctx.beginPath(); ctx.arc(0, 0, wr, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, fx.lineW * 0.38 * (1 - prog));
+      ctx.beginPath(); ctx.arc(0, 0, wr * 0.96, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 5. Bosses (DRAG & BARON)
+  for (const key of ['drag', 'baron']) {
+    const b = S.bosses[key];
+    if (!b.alive) {
+      ctx.fillStyle = 'rgba(200,220,255,0.78)';
+      ctx.font = '800 16px "Be Vietnam Pro", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Tái sinh ${Math.ceil(b.respawnAt - gameNow)}s`, b.x, b.y + 18);
+      continue;
+    }
+    const hover = Math.sin(nowSec * 3.2) * (key === 'drag' ? 4.5 : 2.5);
+    const col = key === 'drag' ? '#fb923c' : '#c084fc';
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    // Cast shadow on pit floor
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    ctx.beginPath(); ctx.ellipse(0, 22, 38, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+    const bossTex = TEX[`boss_${key}`];
+    if (bossTex?.ready) {
+      const bw = key === 'drag' ? 114 : 118;
+      const wingPulse = key === 'drag' ? 1 + Math.sin(nowSec * 6.5) * 0.04 : 1 + Math.sin(nowSec * 3.5) * 0.025;
+      ctx.save();
+      ctx.translate(0, hover - 8);
+      ctx.scale(wingPulse, 1 / Math.sqrt(wingPulse));
+      ctx.drawImage(bossTex.img, -bw / 2, -bw / 2, bw, bw);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = key === 'drag' ? '#ea580c' : '#7e22ce';
+      ctx.beginPath(); ctx.ellipse(0, hover, 22, 24, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Boss HP Bar
+    const pct = Math.max(0, b.hp / b.maxHp);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(-42, -56, 84, 10);
+    ctx.fillStyle = col;
+    ctx.fillRect(-40, -54, 80 * pct, 6);
+    ctx.restore();
+  }
+
+  // 6. 3D Crystal Turrets
+  for (const tr of S.turrets) {
+    if (tr.hp <= 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(18, 18, 24, 0.85)';
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(tr.px, tr.py + 2, 18, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+    const isRed = tr.t === RED;
+    ctx.save();
+    ctx.translate(tr.px, tr.py);
+    // Team ring + ground shadow
+    ctx.fillStyle = isRed ? 'rgba(239, 68, 68, 0.25)' : 'rgba(56, 189, 248, 0.25)';
+    ctx.beginPath(); ctx.ellipse(0, 5, 25, 13, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    ctx.beginPath(); ctx.ellipse(2, 6, 19, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+    const turTex = TEX[`turret_${tr.t}`];
+    if (turTex?.ready) {
+      const bob = Math.sin(nowSec * 3.5 + tr.px) * 1.4;
+      ctx.drawImage(turTex.img, -30, -50 + bob, 60, 60);
+    } else {
+      ctx.fillStyle = '#334155';
+      ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Crisp HP Bar
+    const pct = tr.hp / tr.maxHp;
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(-26, -54, 52, 8);
+    ctx.fillStyle = isRed ? '#ef4444' : '#38bdf8';
+    ctx.fillRect(-25, -53, 50 * pct, 6);
+    ctx.restore();
+
+    if (tr.laser > 0 && tr.tx != null) {
+      ctx.save();
+      ctx.shadowColor = isRed ? '#ef4444' : '#38bdf8';
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = isRed ? '#fca5a5' : '#bae6fd';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(tr.px, tr.py - 32); ctx.lineTo(tr.tx, tr.ty); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 7. Red & Blue Nexuses (Arcane Pulse Over Painted Citadels)
+  for (const t of [RED, BLUE]) {
+    const pos = NEXUS_POS[t];
+    const hpRatio = Math.max(0.05, S.hp[t] / S.maxHp);
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(nowSec * (t === RED ? 0.7 : -0.7));
+    ctx.strokeStyle = t === RED ? 'rgba(248, 113, 113, 0.72)' : 'rgba(56, 189, 248, 0.72)';
+    ctx.lineWidth = 3.5;
+    ctx.setLineDash([14, 9]);
+    ctx.beginPath(); ctx.arc(0, 0, 38 + Math.sin(nowSec * 3) * 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.rotate(-nowSec * (t === RED ? 0.7 : -0.7));
+    const ng = ctx.createRadialGradient(0, -4, 4, 0, 0, 34);
+    ng.addColorStop(0, `rgba(255, 255, 255, ${0.42 * hpRatio})`);
+    ng.addColorStop(0.55, t === RED ? 'rgba(239, 68, 68, 0.25)' : 'rgba(56, 189, 248, 0.25)');
+    ng.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ng;
+    ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // 8. Ground & Flying Units (3D Perspective Sprites — Sorted by Elevation & Y)
+  const sortedUnits = [...S.units].sort((a, b) => (a.spec.fly ? 1 : 0) - (b.spec.fly ? 1 : 0) || a.y - b.y);
+  for (const u of sortedUnits) {
+    const meta = SPRITE_META[u.tier] || SPRITE_META.soldier;
+    const bob = u.spec.fly ? Math.sin(nowSec * 6.5 + u.ph) * 5 - 12 : Math.abs(Math.sin(nowSec * 12 + u.ph)) * -2.8;
+    const lunge = u.atkAnim > 0 ? Math.sin((u.atkAnim / 0.22) * Math.PI) * 7 : 0;
+    const ux = u.x + Math.cos(u.ang) * lunge;
+    const uy = u.y + Math.sin(u.ang) * lunge + bob;
+    const facingLeft = Math.cos(u.ang) < -0.05;
+    const isRed = u.t === RED;
+
+    ctx.save();
+    // Crisp team ground ring + shadow for crystal-clear army identification
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(u.x, u.y + 8, u.spec.r * 0.92, u.spec.r * 0.48, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = u.spec.lord ? 'rgba(253, 224, 71, 0.85)' : (isRed ? 'rgba(248, 113, 113, 0.72)' : 'rgba(56, 189, 248, 0.72)');
+    ctx.lineWidth = u.spec.lord ? 2.6 : 1.7;
+    ctx.beginPath(); ctx.ellipse(u.x, u.y + 7, u.spec.r * 0.96, u.spec.r * 0.50, 0, 0, Math.PI * 2); ctx.stroke();
+
+    if (u.spawnFx > 0) {
+      const fa = Math.min(1, u.spawnFx * 0.65);
+      const pulseR = u.spec.r * (1.28 + Math.sin(nowSec * 9 + u.ph) * 0.14);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = u.spawnFxCol || '#fde047';
+      ctx.globalAlpha = 0.85 * fa;
+      ctx.lineWidth = u.spec.lord ? 3.5 : 2.5;
+      ctx.beginPath(); ctx.ellipse(u.x, u.y + 7, pulseR, pulseR * 0.54, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.translate(ux, uy);
+
+    const tex = TEX[`${u.tier}_${u.t}`];
+    if (tex?.ready) {
+      ctx.save();
+      if (facingLeft) ctx.scale(-1, 1);
+      // Expressive subtle stride lean / wing-beat pulse
+      const bank = Math.sin(u.ang) * 0.08;
+      ctx.rotate(bank);
+      if (u.spec.fly) {
+        const beat = 1 + Math.sin(nowSec * 10 + u.ph) * 0.055;
+        ctx.scale(beat, 2 - beat);
+      }
+      ctx.drawImage(tex.img, meta.ax, meta.ay, meta.size, meta.size);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.rotate(u.ang);
+      ctx.fillStyle = isRed ? '#ef4444' : '#38bdf8';
+      ctx.beginPath(); ctx.arc(0, 0, u.spec.r * 0.7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // Crisp Unit HP Bar (vivid red vs bright cyan like reference screenshot)
+    const bw = u.spec.lord ? 68 : u.tier === 'boneDragon' ? 50 : u.tier === 'dragonKnight' ? 38 : 28;
+    const bh = u.spec.lord ? 6 : 4;
+    const by = meta.barY;
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(-bw / 2 - 1, by - 1, bw + 2, bh + 2);
+    ctx.fillStyle = isRed ? '#ef4444' : '#38bdf8';
+    ctx.fillRect(-bw / 2, by, bw * Math.max(0, u.hp / u.maxHp), bh);
+
+    // Eagle Dragon Lord / Gifted Boss Summoner Nameplate
+    if (u.ownerName && (u.tier !== 'dragonKnight' || u.spawnFx > 0)) {
+      ctx.font = u.spec.lord ? '900 16px "Be Vietnam Pro", sans-serif' : '800 14px "Be Vietnam Pro", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#000';
+      ctx.strokeText(u.ownerName, 0, by - 8);
+      ctx.fillStyle = u.spec.lord ? '#fde047' : u.tier === 'boneDragon' ? '#7dd3fc' : '#f8fafc';
+      ctx.fillText(u.ownerName, 0, by - 8);
+    }
+    ctx.restore();
+  }
+
+  // 9. Projectiles & Sparks
+  for (const pr of S.projectiles) {
+    ctx.save();
+    ctx.translate(pr.x, pr.y);
+    ctx.rotate(pr.ang || 0);
+    if (pr.kind === 'arrow') {
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(8, 0); ctx.stroke();
+    } else {
+      ctx.fillStyle = pr.kind === 'goldfire' ? '#fde047' : TEAM_COL[pr.t];
+      ctx.beginPath(); ctx.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  for (const ptc of S.particles) {
+    ctx.globalAlpha = Math.max(0, ptc.life / ptc.max);
+    ctx.fillStyle = ptc.col;
+    ctx.beginPath(); ctx.arc(ptc.x, ptc.y, ptc.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 9b. Celestial Sky Beams, Guardian Crest Holograms, Lightning & Meteors
+  for (const sb of (S.skyBeams || [])) {
+    const k = Math.max(0, Math.min(1, sb.life / sb.max));
+    const prog = 1 - k;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (sb.kind === 'crest') {
+      const tex = TEX[sb.texKey];
+      const rise = prog * (sb.flipX ? -24 : 52);
+      const sc = 0.78 + Math.sin(Math.min(1, prog * 2.5) * Math.PI * 0.5) * 0.48;
+      const sz = sb.baseSize * sc;
+      ctx.translate(sb.x, sb.y - rise);
+      const hg = ctx.createRadialGradient(0, 0, 6, 0, 0, sz * 0.68);
+      hg.addColorStop(0, `rgba(255, 255, 255, ${0.46 * k})`);
+      hg.addColorStop(0.5, `rgba(${sb.rgb}, ${0.32 * k})`);
+      hg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(0, 0, sz * 0.68, 0, Math.PI * 2); ctx.fill();
+      if (tex?.ready) {
+        if (sb.flipX) ctx.scale(-1, 1);
+        ctx.globalAlpha = Math.min(0.82, Math.sin(Math.min(1, k * 2) * Math.PI * 0.5) * 0.82 * Math.min(1, prog * 7));
+        ctx.drawImage(tex.img, -sz / 2, -sz / 2, sz, sz);
+      }
+    } else {
+      const fade = Math.min(1, k * 1.8) * Math.min(1, prog * 8 + 0.25);
+      const bw = sb.w * (0.7 + 0.45 * Math.sin(nowSec * 14));
+      ctx.translate(sb.x, sb.y);
+      ctx.rotate(sb.tilt || 0);
+      // Ground portal starburst flare
+      const bg = ctx.createRadialGradient(0, 0, 2, 0, 0, bw * 2.8);
+      bg.addColorStop(0, `rgba(255, 255, 255, ${0.95 * fade})`);
+      bg.addColorStop(0.4, `rgba(${sb.rgb}, ${0.65 * fade})`);
+      bg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(0, 0, bw * 2.8, 0, Math.PI * 2); ctx.fill();
+      // Tapered outer celestial glow cone (soft fade top, no rectangle edges)
+      const grad = ctx.createLinearGradient(0, 0, 0, -sb.h);
+      grad.addColorStop(0, `rgba(${sb.rgb}, ${0.8 * fade})`);
+      grad.addColorStop(0.55, `rgba(${sb.rgb}, ${0.32 * fade})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(-bw * 1.15, 0);
+      ctx.lineTo(-bw * 0.35, -sb.h);
+      ctx.lineTo(bw * 0.35, -sb.h);
+      ctx.lineTo(bw * 1.15, 0);
+      ctx.closePath();
+      ctx.fill();
+      // Tapered white-hot core fading smoothly to transparent
+      const cGrad = ctx.createLinearGradient(0, 0, 0, -sb.h * 0.92);
+      cGrad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * fade})`);
+      cGrad.addColorStop(0.55, `rgba(255, 255, 255, ${0.42 * fade})`);
+      cGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = cGrad;
+      ctx.beginPath();
+      ctx.moveTo(-bw * 0.34, 0);
+      ctx.lineTo(-bw * 0.06, -sb.h * 0.92);
+      ctx.lineTo(bw * 0.06, -sb.h * 0.92);
+      ctx.lineTo(bw * 0.34, 0);
+      ctx.closePath();
+      ctx.fill();
+      // Spiralling energy ribbons
+      ctx.strokeStyle = sb.sub;
+      ctx.globalAlpha = 0.82 * fade;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i <= 24; i++) {
+        const f = i / 24;
+        const hx = Math.sin(f * 10 - nowSec * 12) * bw * (1.28 - f * 0.55);
+        const hy = -f * sb.h * 0.85;
+        if (i === 0) ctx.moveTo(hx, hy); else ctx.lineTo(hx, hy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  for (const b of (S.bolts || [])) {
+    if (b.delay && b.life > b.max) continue;
+    const k = Math.max(0, Math.min(1, b.life / b.max));
+    const prog = 1 - k;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (b.kind === 'bolt') {
+      const alpha = Math.pow(k, 0.7);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = b.glow;
+      ctx.globalAlpha = 0.65 * alpha;
+      ctx.lineWidth = b.w * 2.4;
+      ctx.beginPath();
+      b.pts.forEach((pt, idx) => { if (idx === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y); });
+      ctx.stroke();
+      ctx.strokeStyle = b.col;
+      ctx.globalAlpha = 0.95 * alpha;
+      ctx.lineWidth = b.w;
+      ctx.stroke();
+    } else if (b.kind === 'meteor') {
+      const travel = Math.min(1, prog * 1.45);
+      const mx = b.x0 + (b.x1 - b.x0) * travel;
+      const my = b.y0 + (b.y1 - b.y0) * travel;
+      if (travel < 1) {
+        const mg = ctx.createLinearGradient(mx - (b.x1 - b.x0) * 0.25, my - (b.y1 - b.y0) * 0.25, mx, my);
+        mg.addColorStop(0, 'rgba(0,0,0,0)');
+        mg.addColorStop(1, b.col);
+        ctx.strokeStyle = mg;
+        ctx.lineWidth = b.r * 1.25;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(mx - (b.x1 - b.x0) * 0.25, my - (b.y1 - b.y0) * 0.25); ctx.lineTo(mx, my); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(mx, my, b.r * 0.65, 0, Math.PI * 2); ctx.fill();
+      } else {
+        const imp = (prog - 0.69) / 0.31;
+        const ir = b.r * (2 + imp * 5.2);
+        ctx.globalAlpha = Math.max(0, 1 - imp);
+        ctx.strokeStyle = b.col;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.ellipse(b.x1, b.y1, ir, ir * 0.68, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  if (S.flash) {
+    const fk = Math.max(0, S.flash.life / S.flash.max);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const fg = ctx.createRadialGradient(MAP_PX / 2, MAP_PX / 2, MAP_PX * 0.28, MAP_PX / 2, MAP_PX / 2, MAP_PX * 0.74);
+    fg.addColorStop(0, 'rgba(0,0,0,0)');
+    fg.addColorStop(1, `rgba(${S.flash.rgb}, ${S.flash.alpha * fk})`);
+    ctx.fillStyle = fg;
+    ctx.fillRect(0, 0, MAP_PX, MAP_PX);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// ================= HTML OVERLAY UI UPDATE =================
+function updateUI() {
+  if (!S) return;
+  const redPct = (S.hp[RED] / S.maxHp) * 100;
+  const bluePct = (S.hp[BLUE] / S.maxHp) * 100;
+  $('redHpFill').style.width = `${redPct}%`;
+  $('blueHpFill').style.width = `${bluePct}%`;
+  $('redHpTxt').textContent = `${redPct.toFixed(2)}%`;
+  $('blueHpTxt').textContent = `${bluePct.toFixed(2)}%`;
+
+  const sec = Math.max(0, Math.ceil(S.time));
+  $('clock').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  $('clock').classList.toggle('hurry', S.phase === 'fight' && sec <= 180);
+
+  const van = (S.totalScore / 10000).toFixed(2);
+  const mult = Math.min(8, 1 + Math.floor((S.kills[RED] + S.kills[BLUE]) / 45));
+  $('totalPtsTxt').textContent = `Số điểm: ${van} vạn · 🪙 X${mult}`;
+
+  $('redStatTxt').textContent = `🔴 Đỏ: ${S.cmt[RED].toLocaleString('vi-VN')} cmt · ${S.kills[RED]} hạ`;
+  $('blueStatTxt').textContent = `🔵 Xanh: ${S.cmt[BLUE].toLocaleString('vi-VN')} cmt · ${S.kills[BLUE]} hạ`;
+
+  // Top 1-2-3 avatars per team
+  for (const [t, elId] of [[RED, 'redAvatars'], [BLUE, 'blueAvatars']]) {
+    const top = [...S.players.values()].filter((p) => p.side === t).sort((a, b) => b.pts - a.pts).slice(0, 3);
+    const wrap = $(elId);
+    wrap.innerHTML = [0, 1, 2].map((i) => {
+      const p = top[i];
+      const avHtml = p?.avatar
+        ? `<img src="${p.avatar}" alt="" onerror="this.remove()">`
+        : (p ? p.name.slice(0, 1).toUpperCase() : '?');
+      return `<div class="avSlot"><div class="avRank">${i + 1}</div><div class="avCircle">${avHtml}</div><div class="avName o">${p ? p.name : `Top ${i + 1}`}</div></div>`;
+    }).join('');
+  }
+
+  // Buff badges
+  const buffs = [];
+  for (const t of [RED, BLUE]) {
+    if (S.buffUntil.drag[t] > gameNow) buffs.push(`<span class="buffBadge drag">🔥 Rồng ${TEAM_LABEL[t]} ${Math.ceil(S.buffUntil.drag[t] - gameNow)}s</span>`);
+    if (S.buffUntil.baron[t] > gameNow) buffs.push(`<span class="buffBadge baron">🟣 Baron ${TEAM_LABEL[t]} ${Math.ceil(S.buffUntil.baron[t] - gameNow)}s</span>`);
+  }
+  $('buffRow').innerHTML = buffs.join('');
+  $('tickerBox').innerHTML = S.tickers.map((t) => `<div>${t}</div>`).join('');
+}
+
+// ================= SOUND & MC VOICE =================
+const SND = {
+  bgm: ['bgm.wav', 0, 0.22],
+  sword: ['sword.wav', 0.2, 0.3],
+  arrow: ['arrow.wav', 0.2, 0.3],
+  portal: ['portal.wav', 0.6, 0.55],
+  dragon: ['dragon.wav', 0.8, 0.65],
+  lord: ['lord.wav', 1.1, 0.72],
+  turret: ['turret.wav', 0.55, 0.65],
+  boss: ['boss.wav', 0.95, 0.72],
+  win: ['win.wav', 1.3, 0.75],
+};
+let AC = null, sndOn = false, master = null, duckG = null, bgmGain = null, lastSfx = {};
+const BUF = {};
+const VOL = { music: 0.5, sfx: 1, mc: 1 };
+
+async function loadSounds() {
+  await Promise.all(Object.entries(SND).map(async ([k, [f]]) => {
+    if (BUF[k]) return;
+    try { BUF[k] = await AC.decodeAudioData(await (await fetch('sound/' + f)).arrayBuffer()); } catch {}
+  }));
+}
+function sfx(name) {
+  if (!sndOn || !BUF[name] || VOL.sfx <= 0 || MUTED) return;
+  const t0 = AC.currentTime;
+  if (t0 - (lastSfx[name] || 0) < 0.14) return;
+  lastSfx[name] = t0;
+  const [, , base] = SND[name];
+  const src = AC.createBufferSource(), g = AC.createGain();
+  src.buffer = BUF[name];
+  src.playbackRate.value = 0.94 + Math.random() * 0.12;
+  g.gain.value = base * VOL.sfx;
+  src.connect(g).connect(master);
+  src.start(t0);
+}
+function duck(on) {
+  if (!bgmGain || !AC) return;
+  bgmGain.gain.setTargetAtTime((on ? 0.08 : SND.bgm[2]) * VOL.music, AC.currentTime, 0.25);
+}
+async function soundOn(on) {
+  if (MUTED) return;
+  if (on) {
+    try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); await AC.resume(); } catch { return; }
+    if (!master) {
+      master = AC.createGain(); master.connect(AC.destination);
+      duckG = AC.createGain(); duckG.connect(master);
+    }
+    sndOn = true;
+    await loadSounds();
+    if (!bgmGain && BUF.bgm) {
+      const s = AC.createBufferSource(); bgmGain = AC.createGain();
+      s.buffer = BUF.bgm; s.loop = true; bgmGain.gain.value = SND.bgm[2] * VOL.music;
+      s.connect(bgmGain).connect(duckG); s.start();
+    }
+  } else {
+    sndOn = false;
+    if (bgmGain && AC) bgmGain.gain.setTargetAtTime(0, AC.currentTime, 0.2);
+  }
+}
+
+const EDGE_VOICES = { 'Nam Minh': 'm', 'Hoài My': 'f' };
+const mc = { q: [], busy: false, speaker: !EMBED && !MUTED, audio: null };
+const mcPrefs = { mcOn: '1', mcVoice: 'Nam Minh', mcSpeed: '1.15', mcExpr: '0.95' };
+
+function mcSay(text, prio = 1) {
+  if (MUTED || mcPrefs.mcOn === '0' || !text) return;
+  mc.q.push({ text, prio, at: performance.now() });
+  mc.q.sort((a, b) => b.prio - a.prio || a.at - b.at);
+  if (mc.q.length > 4) mc.q.length = 4;
+  mcNext();
+}
+
+async function mcNext() {
+  if (mc.busy || mcPrefs.mcOn === '0' || !mc.speaker || MUTED) return;
+  let line;
+  while ((line = mc.q.shift()) && performance.now() - line.at > 20000);
+  if (!line) return;
+  mc.busy = true;
+  try {
+    if (!sndOn && mc.speaker) await soundOn(true);
+    const v = mcPrefs.mcVoice || 'Nam Minh';
+    const edge = EDGE_VOICES[v];
+    const q = new URLSearchParams(
+      edge
+        ? { v: edge, rate: mcPrefs.mcSpeed, text: line.text.replace(/\[[^\]]+\]\s*/g, '') }
+        : { eng: 'vn', voice: v, temp: mcPrefs.mcExpr, text: line.text },
+    );
+    const r = await fetch('/api/tts?' + q);
+    if (!r.ok) throw new Error('TTS HTTP ' + r.status);
+    const url = URL.createObjectURL(await r.blob());
+    const a = new Audio(url);
+    mc.audio = a;
+    a.preservesPitch = true;
+    a.playbackRate = Number(mcPrefs.mcSpeed) || 1.15;
+    a.volume = Math.min(1, VOL.mc);
+    duck(true);
+    if ($('mcState')) $('mcState').textContent = '🗣 ' + line.text.slice(0, 42);
+    await new Promise((res, rej) => { a.onended = res; a.onerror = rej; a.play().catch(rej); });
+    URL.revokeObjectURL(url);
+    mc.audio = null;
+  } catch (e) {
+    if ($('mcState')) $('mcState').textContent = '⚠ ' + String(e?.message || e).slice(0, 45);
+  }
+  duck(false);
+  mc.busy = false;
+  setTimeout(mcNext, 250);
+}
+
+// ================= GLOBAL GAME_API (HOST BRIDGE) =================
+window.GAME_API = {
+  event(ev) {
+    if (!ev || !S) return { side: null, joined: false };
+    if (ev.type === 'comment') return onComment(ev);
+    if (ev.type === 'gift') { onGift(ev); return { side: null }; }
+    if (ev.type === 'like') { onLike(ev); return { side: null }; }
+    if (ev.type === 'share' || ev.type === 'follow' || ev.type === 'member') { onSimple(ev.type, ev); return { side: null }; }
+    return { side: null };
+  },
+  sayText(text, prio = 2) { mcSay(text, prio); },
+  stopVoice() { mc.q.length = 0; if (mc.audio) { mc.audio.pause(); mc.audio = null; } },
+  setSpeaker(on) {
+    mc.speaker = !!on && !MUTED;
+    if (mc.speaker && !sndOn) soundOn(true);
+    if (!mc.speaker) window.GAME_API.stopVoice();
+    else mcNext();
+  },
+  setMc(prefs) {
+    if (!prefs) return;
+    if (prefs.mcOn !== undefined) mcPrefs.mcOn = prefs.mcOn;
+    if (prefs.mcVoice) mcPrefs.mcVoice = prefs.mcVoice;
+    if (prefs.mcSpeed) mcPrefs.mcSpeed = prefs.mcSpeed;
+    if (prefs.mcExpr) mcPrefs.mcExpr = prefs.mcExpr;
+    if (prefs.musicVol !== undefined) { VOL.music = Number(prefs.musicVol); if (bgmGain && AC) bgmGain.gain.setTargetAtTime(SND.bgm[2] * VOL.music, AC.currentTime, 0.2); }
+    if (prefs.sfxVol !== undefined) VOL.sfx = Number(prefs.sfxVol);
+    if (prefs.mcVol !== undefined) VOL.mc = Number(prefs.mcVol);
+    if (!EMBED) {
+      if ($('mcOn')) $('mcOn').checked = mcPrefs.mcOn !== '0';
+      if ($('mcVoice')) $('mcVoice').value = mcPrefs.mcVoice;
+    }
+  },
+  setGifts(rules) { setGiftRules(rules); },
+  setLength(sec) { matchLen = Math.max(30, Number(sec) || 1800); newMatch(); },
+  jump(j) {
+    if (!S) return;
+    if (j === 3) S.time = Math.min(S.time, 180);
+    else if (j === 1.5) S.time = matchLen * 0.5;
+    else if (j === 1) S.time = matchLen * 0.66;
+    else if (j === 2) S.time = matchLen * 0.33;
+  },
+  newMatch,
+  phase() { return S ? S.phase : 'fight'; },
+  stats() {
+    if (!S) return { units: 0, dragons: 0, fx: 0, hp: [0, 0], kills: [0, 0], cmt: [0, 0], players: 0, heart: [0, 0], broken: [0, 0], round: 0, phase: 'fight', time: 0, fps: fpsShown };
+    const redUnits = S.units.filter((u) => u.t === RED).length;
+    const blueUnits = S.units.length - redUnits;
+    const dragons = S.units.filter((u) => u.tier === 'boneDragon' || u.tier === 'eagleDragonLord').length;
+    return {
+      units: S.units.length,
+      redUnits,
+      blueUnits,
+      dragons,
+      fx: S.particles.length + S.portals.length,
+      hp: [...S.hp],
+      kills: [...S.kills],
+      cmt: [...S.cmt],
+      players: S.players.size,
+      heart: [...S.heart],
+      broken: [S.turrets.filter((t) => t.t === RED && t.hp <= 0).length, S.turrets.filter((t) => t.t === BLUE && t.hp <= 0).length],
+      round: S.round,
+      phase: S.phase,
+      time: Math.ceil(S.time),
+      fps: fpsShown,
+      dragPct: Math.round((S.bosses.drag.hp / S.bosses.drag.maxHp) * 100),
+      baronPct: Math.round((S.bosses.baron.hp / S.bosses.baron.maxHp) * 100),
+    };
+  },
+};
+
+// ================= STANDALONE TEST PANEL WIRING =================
+if (!EMBED) {
+  const HO = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Vũ', 'Đặng'];
+  const TEN = ['Lan Anh', 'Minh Tuấn', 'Thu Hà', 'Quốc Bảo', 'Ngọc Mai', 'Hoàng Long', 'Gia Huy'];
+  let uid = 0;
+  const fake = () => { uid++; return { user: 'u' + uid, name: `${HO[uid % HO.length]} ${TEN[(uid * 3) % TEN.length]}` }; };
+  let giftSide = 0, autoTimer = null;
+  document.querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => {
+    const a = b.dataset.act, f = fake();
+    if (a === 'c1') onComment({ ...f, text: '1' });
+    else if (a === 'c2') onComment({ ...f, text: '2' });
+    else if (a === 'like') onLike({ ...f, count: 150 });
+    else onComment({ ...f, text: a });
+  }));
+  document.querySelectorAll('[data-side]').forEach((b) => (b.onclick = () => {
+    giftSide = Number(b.dataset.side);
+    document.querySelectorAll('[data-side]').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  document.querySelectorAll('[data-gift]').forEach((b) => (b.onclick = () => {
+    const f = fake();
+    onComment({ ...f, text: String(giftSide + 1) });
+    onGift({ ...f, coins: Number(b.dataset.gift), giftName: b.dataset.name, count: 1 });
+  }));
+  document.querySelectorAll('[data-len]').forEach((b) => (b.onclick = () => {
+    document.querySelectorAll('[data-len]').forEach((x) => x.classList.toggle('on', x === b));
+    window.GAME_API.setLength(Number(b.dataset.len));
+  }));
+  document.querySelectorAll('[data-jump]').forEach((b) => (b.onclick = () => window.GAME_API.jump(Number(b.dataset.jump))));
+  document.querySelectorAll('[data-auto]').forEach((b) => (b.onclick = () => {
+    document.querySelectorAll('[data-auto]').forEach((x) => x.classList.toggle('on', x === b));
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    const n = Number(b.dataset.auto);
+    if (n > 0) {
+      const cmds = ['1', '2', 'top', 'mid', 'adc', 'bac', 'upatk', 'downatk'];
+      autoTimer = setInterval(() => {
+        const f = fake();
+        onComment({ ...f, text: cmds[Math.floor(Math.random() * cmds.length)] });
+        if (Math.random() < 0.14) onGift({ ...f, coins: Math.random() < 0.15 ? 299 : 1, giftName: Math.random() < 0.15 ? 'Corgi' : 'Hoa hồng', count: 1 });
+      }, Math.max(120, Math.round(1800 / (n / 10))));
+    }
+  }));
+  $('snd').onclick = async () => { await soundOn(!sndOn); $('snd').textContent = sndOn ? '🔊 Tắt âm' : '🔇 Bật âm thanh'; };
+  $('newMatch').onclick = newMatch;
+  $('mcOn').onchange = () => { mcPrefs.mcOn = $('mcOn').checked ? '1' : '0'; };
+  $('mcVoice').onchange = () => { mcPrefs.mcVoice = $('mcVoice').value; };
+  $('mcSpeed').oninput = () => { mcPrefs.mcSpeed = $('mcSpeed').value; $('mcSpeedV').textContent = Number(mcPrefs.mcSpeed).toFixed(2) + 'x'; };
+  $('mcExpr').oninput = () => { mcPrefs.mcExpr = $('mcExpr').value; $('mcExprV').textContent = Number(mcPrefs.mcExpr).toFixed(2); };
+  $('mcTest').onclick = async () => { if (!sndOn) await soundOn(true); mcSay('Cổng không gian vừa mở! Triệu hồi Bá Chủ Rồng Ưng tiếp viện!', 9); };
+} else if (!MUTED) {
+  addEventListener('pointerdown', () => { if (mc.speaker && (!AC || AC.state !== 'running')) soundOn(true); });
+}
+
+// ================= MAIN LOOP =================
+let lastTs = performance.now();
+function frameLoop(ts) {
+  const dt = Math.min(0.05, (ts - lastTs) / 1000);
+  lastTs = ts;
+  fpsFrames++;
+  step(dt);
+  render(ts / 1000);
+  if (tick % 6 === 0) updateUI();
+  requestAnimationFrame(frameLoop);
+}
+
+setInterval(() => {
+  fpsShown = fpsFrames;
+  fpsFrames = 0;
+  if (!EMBED && $('stats')) {
+    const s = window.GAME_API.stats();
+    $('stats').innerHTML = `<b>${s.fps} FPS</b> · Lính: ${s.units} (Đỏ ${s.redUnits} / Xanh ${s.blueUnits}) · Rồng: ${s.dragons}<br>Nhà chính: Đỏ ${Math.ceil(s.hp[0])} / Xanh ${Math.ceil(s.hp[1])} · Rồng: ${s.dragPct}% · Baron: ${s.baronPct}%<br>Cmt: Đỏ ${s.cmt[0]} / Xanh ${s.cmt[1]} · Người chơi: ${s.players}`;
+  }
+}, 1000);
+
+document.fonts.ready.then(() => {
+  renderGiftLegend();
+  if (typeof fetch === 'function') {
+    fetch('/api/gifts').then((r) => r.json()).then((d) => {
+      if (Array.isArray(d?.rules)) setGiftRules(d.rules);
+    }).catch(() => {});
+  }
+  newMatch();
+  requestAnimationFrame(frameLoop);
+});
+})();
+</script>
+</body>
+</html>
+
