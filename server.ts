@@ -201,7 +201,34 @@ app.get('/api/tiktok/status', (_req, res) => res.json({ success: true, data: liv
 // ---------- Đọc dữ liệu TikTok (proto v3) ----------
 const userOf = (data: any) => data?.user?.displayId || data?.user?.uniqueId || data?.uniqueId || 'nguoi-xem';
 const nickOf = (data: any) => data?.user?.nickname || data?.nickname || data?.uniqueId || 'Bạn';
-const avatarOf = (data: any) => data?.user?.avatarThumb?.urlList?.[0] || '';
+function avatarOf(data: any): string {
+  const user = data?.user;
+  const images = [
+    user?.avatarThumb, user?.avatarMedium, user?.avatarLarge,
+    user?.profilePictureUrl, user?.avatar, data?.profilePictureUrl, data?.avatar,
+  ];
+  for (const image of images) {
+    const candidates: unknown[] = typeof image === 'string'
+      ? [image]
+      : [
+        ...(Array.isArray(image?.urlList) ? image.urlList : []),
+        ...(Array.isArray(image?.urls) ? image.urls : []),
+        image?.url,
+      ];
+    for (const candidate of candidates) {
+      if (typeof candidate !== 'string') continue;
+      const source = candidate.trim();
+      const url = source.startsWith('//') ? 'https:' + source : source;
+      if (!/^https?:\/\//i.test(url)) continue;
+      try {
+        if (new URL(url).hostname) return url;
+      } catch {
+        // Try the next URL supplied by TikTok.
+      }
+    }
+  }
+  return '';
+}
 
 app.post('/api/tiktok/connect', async (req, res) => {
   const cleanUser = String(req.body?.username || '').replace(/^@/, '').trim();
@@ -252,15 +279,33 @@ app.post('/api/tiktok/connect', async (req, res) => {
   });
 
   const streakCounts = new Map<string, number>();
+  const giftMessages = new Set<string>();
   conn.on(WebcastEvent.GIFT, (data: any) => {
     const username = userOf(data);
     const giftId = data?.giftId || 0;
-    const key = `${username}_${giftId}`;
-    const total = data?.repeatCount || 1;
-    const delta = total - (streakCounts.get(key) || 0);
     const isStreakable = (data?.gift?.type ?? data?.giftDetails?.giftType ?? data?.giftType) === 1;
-    if (isStreakable && !data?.repeatEnd) streakCounts.set(key, total);
-    else streakCounts.delete(key);
+    const count = Math.floor(Number(data?.repeatCount));
+    const total = Number.isSafeInteger(count) && count > 0 ? count : 1;
+    const messageId = String(data?.common?.msgId || data?.msgId || '');
+    if (messageId && messageId !== '0') {
+      const message = `${messageId}_${total}_${!!data?.repeatEnd}`;
+      if (giftMessages.has(message)) return;
+      giftMessages.add(message);
+      if (giftMessages.size > 2048) giftMessages.delete(giftMessages.values().next().value!);
+    }
+    const group = String(data?.groupId || '');
+    const hasGroup = group !== '' && group !== '0';
+    const key = `${username}_${giftId}_${hasGroup ? group : ''}`;
+    const previous = isStreakable ? (streakCounts.get(key) || 0) : 0;
+    const delta = total - previous;
+    if (isStreakable) {
+      if (hasGroup || !data?.repeatEnd) {
+        streakCounts.set(key, Math.max(total, previous));
+        if (streakCounts.size > 2048) streakCounts.delete(streakCounts.keys().next().value!);
+      } else {
+        streakCounts.delete(key);
+      }
+    }
     if (delta <= 0) return;
 
     broadcast('gift', {
@@ -299,6 +344,7 @@ app.post('/api/tiktok/connect', async (req, res) => {
     broadcast('like', {
       username: userOf(data),
       nickname: nickOf(data),
+      avatar: avatarOf(data),
       likeCount: data?.likeCount || 1,
       totalLikes: liveStats.totalLikes,
     });
@@ -437,6 +483,7 @@ function splitText(text: string, max = 190): string[] {
 
 async function edgeTts(text: string, rate: number, voiceName: string, hype: boolean): Promise<Buffer> {
   const tts = new MsEdgeTTS();
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
     const { audioStream } = tts.toStream(escapeXml(text), {
@@ -448,11 +495,14 @@ async function edgeTts(text: string, rate: number, voiceName: string, hype: bool
     const read = (async () => {
       for await (const c of audioStream) chunks.push(c as Buffer);
     })();
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Edge TTS timeout')), 20000));
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Edge TTS timeout')), 20000);
+    });
     await Promise.race([read, timeout]);
     if (chunks.length === 0) throw new Error('Edge TTS không trả âm thanh');
     return Buffer.concat(chunks);
   } finally {
+    clearTimeout(timer);
     tts.close();
   }
 }
@@ -474,50 +524,74 @@ async function googleTts(text: string): Promise<Buffer> {
 }
 
 const VIENEU_URL = process.env.VIENEU_URL || 'http://127.0.0.1:8000';
-async function vieneuTts(text: string, voice: string, temperature: number): Promise<Buffer> {
+async function vieneuTts(text: string, voice: string, temperature: number, signal: AbortSignal): Promise<Buffer> {
   const r = await fetch(`${VIENEU_URL}/v1/audio/speech`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'vieneu', input: text, voice, response_format: 'wav', temperature }),
-    signal: AbortSignal.timeout(15000),
+    signal,
   });
   if (!r.ok) throw new Error(`VieNeu ${r.status}`);
   const wav = Buffer.from(await r.arrayBuffer());
   const di = wav.indexOf('data', 12);
-  if (wav.toString('ascii', 0, 4) === 'RIFF' && di > 0) {
-    wav.writeUInt32LE(wav.length - 8, 4);
-    wav.writeUInt32LE(wav.length - di - 8, di + 4);
+  if (wav.toString('ascii', 0, 4) !== 'RIFF' || di < 0 || wav.length <= di + 8) {
+    throw new Error('VieNeu không trả âm thanh WAV hợp lệ');
   }
+  wav.writeUInt32LE(wav.length - 8, 4);
+  wav.writeUInt32LE(wav.length - di - 8, di + 4);
   return wav;
 }
 
 const ttsCache = new Map<string, Buffer>();
 app.get('/api/tts', async (req, res) => {
   try {
+    const preview = req.query.preview === '1';
+    if (preview) res.setHeader('Cache-Control', 'no-store');
     const text = String(req.query.text || '').trim().slice(0, 1500);
     if (!text) return res.status(400).send('Thiếu text');
     if (req.query.eng === 'vn') {
       const voice = String(req.query.voice || 'Adam bựa').replace(/[^\p{L}\p{N} ]/gu, '').slice(0, 40) || 'Adam bựa';
       const temp = Math.min(1.5, Math.max(0.3, Number(req.query.temp) || 0.95));
+      const timeout = AbortSignal.timeout(preview ? 30000 : 15000);
+      const cancel = new AbortController();
+      const onClose = () => cancel.abort();
+      if (preview) res.once('close', onClose);
       try {
-        const wav = await vieneuTts(text.slice(0, 400), voice, temp);
+        const wav = await vieneuTts(text.slice(0, 400), voice, temp, AbortSignal.any([timeout, cancel.signal]));
         res.setHeader('Content-Type', 'audio/wav');
         res.setHeader('Cache-Control', 'no-store');
         return res.send(wav);
       } catch (err) {
+        if (cancel.signal.aborted) return;
+        if (preview) {
+          console.warn('VieNeu nghe thử lỗi:', err instanceof Error ? err.message : err);
+          return res.status(503).json({ error: timeout.aborted
+            ? 'VieNeu-TTS phản hồi quá lâu. Hãy thử lại.'
+            : `Chưa tạo được mẫu giọng ${voice}. Kiểm tra VieNeu-TTS đang chạy và có giọng này, rồi thử lại.` });
+        }
         console.warn('VieNeu lỗi, đọc bằng Edge:', err instanceof Error ? err.message : err);
+      } finally {
+        if (preview) res.off('close', onClose);
       }
     }
     const said = text.replace(/\[[^\]]{1,20}\]\s*/g, '').trim() || text;
     const rate = Math.min(1.5, Math.max(0.5, Number(req.query.rate) || 1));
     const hype = req.query.hype === '1';
     const voiceName = req.query.v === 'f' ? TTS_VOICE_F : TTS_VOICE;
-    const key = `${voiceName}|${rate}|${hype}|${said}`;
+    const key = `${preview ? 'preview|' : ''}${voiceName}|${rate}|${hype}|${said}`;
     let audio = ttsCache.get(key);
     if (!audio) {
       try {
         audio = await edgeTts(said, rate, voiceName, hype);
       } catch (err) {
+        if (preview) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn('Edge nghe thử lỗi:', message);
+          if (/\b429\b/.test(message)) {
+            return res.status(429).json({ error: 'Dịch vụ giọng đọc đang giới hạn lượt thử. Hãy chờ một chút rồi thử lại.' });
+          }
+          return res.status(503).json({ error: 'Microsoft Edge chưa tạo được mẫu giọng. Kiểm tra kết nối mạng rồi thử lại.' });
+        }
         console.warn('Edge TTS lỗi, chuyển Google:', err instanceof Error ? err.message : err);
         audio = await googleTts(said);
       }
@@ -525,7 +599,7 @@ app.get('/api/tts', async (req, res) => {
       if (ttsCache.size > 200) ttsCache.delete(ttsCache.keys().next().value!);
     }
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    if (!preview) res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(audio);
   } catch (err) {
     console.error('TTS lỗi:', err);
@@ -608,8 +682,9 @@ app.get('/api/voices', async (_req, res) => {
   try {
     const r = await fetch(`${VIENEU_URL}/v1/voices`, { signal: AbortSignal.timeout(1200) });
     if (!r.ok) return res.json({ vieneu: false, voices: [] });
-    const data = (await r.json()) as { voices?: unknown };
-    return res.json({ vieneu: true, voices: Array.isArray(data?.voices) ? data.voices : [] });
+    const data = (await r.json()) as { voices?: unknown; data?: unknown };
+    const voices = Array.isArray(data?.voices) ? data.voices : data?.data;
+    return res.json({ vieneu: true, voices: Array.isArray(voices) ? voices : [] });
   } catch {
     return res.json({ vieneu: false, voices: [] });
   }

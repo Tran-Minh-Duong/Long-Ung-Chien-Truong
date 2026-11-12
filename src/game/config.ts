@@ -13,9 +13,10 @@ export const GAME = {
     musicVol: '0.5',
     sfxVol: '1',
     mcVol: '1',
+    graphics: 'full',
   } as Record<string, string>,
 
-  voices: ['Nam Minh', 'Hoài My', 'Adam bựa', 'Thiện Minh', 'Hải Đăng', 'Trúc Ly', 'Mai Anh'],
+  voices: ['Nam Minh', 'Hoài My'],
 
   wishPerUserMs: 10 * 60_000,
   wishGlobalMs: 30_000,

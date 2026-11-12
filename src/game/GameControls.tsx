@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { emitTest, sendControl } from '../live/page';
 import type { GiftRule } from '../live/types';
 import { GAME } from './config';
-import { gameApi } from './frame';
+import { gameApi, type GameStats } from './frame';
 import { GiftManager } from './GiftManager';
 import { DISCLAIMER_ITEMS } from './unitConfig';
 
@@ -27,12 +27,19 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
   const rulesRef = useRef<GiftRule[]>(giftRules);
   rulesRef.current = giftRules;
   const [simInfo, setSimInfo] = useState('');
+  const [stats, setStats] = useState<GameStats | null>(null);
+  useEffect(() => {
+    const timer = setInterval(() => setStats(gameApi()?.stats() ?? null), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const asPlayer = async (s: string, then?: (u: ReturnType<typeof who>) => Promise<void>) => {
     const u = who();
     await emitTest('chat', { ...u, comment: s });
     await then?.(u);
   };
+
+  const voteAs = (team: '1' | '2', lane: 'top' | 'mid' | 'adc') => asPlayer(`${team} ${lane}`);
 
   // Kiểm tra đếm comment: gửi 200 comment đủ kiểu và so sánh bộ đếm của game
   const testCount = async () => {
@@ -53,7 +60,7 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
     const after = gameApi()?.stats().cmt ?? before;
     const got = after[0] - before[0] + (after[1] - before[1]);
     setCount(
-      `Gửi ${sent} comment, game đếm ${got}. ${got === sent ? '✅ Khớp, không sót comment nào.' : '❌ Lệch bộ đếm, kiểm tra lại.'} (Đỏ +${after[0] - before[0]}, Xanh +${after[1] - before[1]})`,
+      `Gửi ${sent} comment, game đếm ${got}. ${got === sent ? 'Khớp toàn bộ comment.' : 'Lệch bộ đếm, kiểm tra lại.'} (Đỏ +${after[0] - before[0]}, Xanh +${after[1] - before[1]})`,
     );
   };
 
@@ -135,7 +142,7 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
           });
         }
       }
-      setSimInfo(`Phút ${(el / 60).toFixed(1)}/30 · ${active} người đang xem · ${busy > 1 ? '🔥 ' : ''}${label}`);
+      setSimInfo(`Phút ${(el / 60).toFixed(1)}/30 · ${active} người đang xem · ${label}`);
     }, 250);
     const stop = () => {
       clearInterval(timer);
@@ -160,7 +167,7 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
           onClick={() => setShowRules((v) => !v)}
           className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-amber-200 hover:bg-slate-700"
         >
-          ⚠️ {showRules ? 'Ẩn lưu ý trách nhiệm' : 'Xem 7 lưu ý & trách nhiệm'}
+          {showRules ? 'Ẩn lưu ý trách nhiệm' : 'Xem 7 lưu ý & trách nhiệm'}
         </button>
       </div>
 
@@ -176,7 +183,7 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
       )}
 
       <Row title="Trận đấu">
-        <B onClick={() => sendControl('custom', 'match')}>⚔️ Trận mới</B>
+        <B onClick={() => sendControl('custom', 'match')}>Trận mới</B>
         <B onClick={() => sendControl('custom', 'len:1800')}>30 phút</B>
         <B onClick={() => sendControl('custom', 'len:300')}>5 phút (thử)</B>
         <B onClick={() => sendControl('custom', 'len:90')}>90 giây (thử)</B>
@@ -187,26 +194,47 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
         <B onClick={() => sendControl('custom', 'jump:3')}>3 phút cuối</B>
       </Row>
 
-      <Row title="Đếm comment (kiểm tra nhận toàn bộ lệnh & comment)">
-        <B onClick={testCount}>🧮 Kiểm tra đếm comment (gửi 200 comment đủ kiểu)</B>
+      <Row title="Đếm bình luận (kiểm tra nhận toàn bộ lệnh & bình luận)">
+        <B onClick={testCount}>Kiểm tra đếm bình luận (200 comment)</B>
         {count && <div className="w-full text-sm text-amber-300">{count}</div>}
       </Row>
 
       <Row title="Người xem giả · Điều khiển phe & 3 đường">
-        <B onClick={() => asPlayer('1')}>🔴 Gõ "1" (Đỏ)</B>
-        <B onClick={() => asPlayer('2')}>🔵 Gõ "2" (Xanh)</B>
-        <B onClick={() => asPlayer('top')}>⬆️ top</B>
-        <B onClick={() => asPlayer('mid')}>↗️ mid</B>
-        <B onClick={() => asPlayer('adc')}>⬇️ adc</B>
-        <B onClick={() => asPlayer('bac')}>🏠 bac</B>
-        <B onClick={() => asPlayer('upatk')}>🐉 upatk</B>
-        <B onClick={() => asPlayer('downatk')}>🟣 downatk</B>
+        <B onClick={() => asPlayer('1')}>Gõ "1" (Đỏ)</B>
+        <B onClick={() => asPlayer('2')}>Gõ "2" (Xanh)</B>
+        <B onClick={() => asPlayer('top')}>top</B>
+        <B onClick={() => asPlayer('mid')}>mid</B>
+        <B onClick={() => asPlayer('adc')}>adc</B>
+        <B onClick={() => asPlayer('bac')}>bac</B>
+        <B onClick={() => asPlayer('upatk')}>upatk</B>
+        <B onClick={() => asPlayer('downatk')}>downatk</B>
         <B onClick={() => asPlayer('1111')}>Gõ "1111"</B>
-        <B onClick={() => asPlayer('hay quá')}>Comment thường</B>
+        <B onClick={() => asPlayer('hay quá')}>Bình luận thường</B>
         <B onClick={() => asPlayer('1', (u) => emitTest('like', { ...u, likeCount: 1000 }))}>+1k tim Đỏ</B>
         <B onClick={() => asPlayer('2', (u) => emitTest('like', { ...u, likeCount: 1000 }))}>+1k tim Xanh</B>
-        <B onClick={() => asPlayer('1', (u) => emitTest('share', u))}>↗ Chia sẻ</B>
-        <B onClick={() => asPlayer('2', (u) => emitTest('follow', u))}>➕ Theo dõi</B>
+        <B onClick={() => asPlayer('1', (u) => emitTest('share', u))}>Chia sẻ</B>
+        <B onClick={() => asPlayer('2', (u) => emitTest('follow', u))}>Theo dõi</B>
+      </Row>
+
+      <Row title="Xe Công Thành (Bỏ phiếu khán giả)">
+        <B onClick={() => sendControl('custom', 'siegeVote')}>Bỏ phiếu (20s)</B>
+        <B onClick={() => voteAs('1', 'top')}>Đỏ vote top</B>
+        <B onClick={() => voteAs('1', 'mid')}>Đỏ vote mid</B>
+        <B onClick={() => voteAs('1', 'adc')}>Đỏ vote adc</B>
+        <B onClick={() => voteAs('2', 'top')}>Xanh vote top</B>
+        <B onClick={() => voteAs('2', 'mid')}>Xanh vote mid</B>
+        <B onClick={() => voteAs('2', 'adc')}>Xanh vote adc</B>
+        <B onClick={() => sendControl('custom', 'spawnSiege:0:mid')}>Sinh Xe Đỏ (mid)</B>
+        <B onClick={() => sendControl('custom', 'spawnSiege:1:mid')}>Sinh Xe Xanh (mid)</B>
+      </Row>
+
+      <Row title="Giao tranh & Hiệp phụ">
+        <B onClick={() => sendControl('custom', 'overtime')}>Thử Hiệp phụ 60s</B>
+        <B onClick={() => sendControl('custom', 'contest:drag')}>Rồng tranh chấp</B>
+        <B onClick={() => sendControl('custom', 'contest:baron')}>Baron tranh chấp</B>
+        <B onClick={() => sendControl('custom', 'moment:turret')}>Thử Phá trụ</B>
+        <B onClick={() => sendControl('custom', 'moment:boss')}>Thử Hạ boss</B>
+        <B onClick={() => sendControl('custom', 'moment:lord')}>Thử Bá Chủ</B>
       </Row>
 
       <GiftManager
@@ -240,42 +268,29 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
         }}
       />
 
-      <Row title="Mô phỏng trọn trận 30 phút (chạy thật 30 phút, stage nhận như live)">
-        <B onClick={() => startSim('full')}>▶ Live đông (3 đợt dồn dập)</B>
-        <B onClick={() => startSim('low')}>▶ Live ít khách</B>
-        <B onClick={() => sim.current?.()}>■ Dừng</B>
+      <Row title="Mô phỏng trận 30 phút">
+        <B onClick={() => startSim('full')}>Live đông (3 đợt dồn dập)</B>
+        <B onClick={() => startSim('low')}>Live ít người</B>
+        <B onClick={() => sim.current?.()}>Dừng</B>
         {simInfo && <div className="w-full text-sm text-amber-300">{simInfo}</div>}
       </Row>
 
-      <Row title="Âm lượng trên live (đổi ngay, server nhớ cho lần sau)">
-        <Vol label="🎵 Nhạc nền" value={mc.musicVol} max={1.5} onChange={(v) => saveMc({ musicVol: v })} />
-        <Vol label="💥 Tiếng hiệu ứng" value={mc.sfxVol} max={1.5} onChange={(v) => saveMc({ sfxVol: v })} />
-        <Vol label="🗣 Giọng MC" value={mc.mcVol} max={1} onChange={(v) => saveMc({ mcVol: v })} />
+      <Row title="Đồ họa sân khấu">
+        <B onClick={() => saveMc({ graphics: 'full' })} on={mc.graphics !== 'lite'}>Chuẩn</B>
+        <B onClick={() => saveMc({ graphics: 'lite' })} on={mc.graphics === 'lite'}>Nhẹ (30 FPS)</B>
+        {stats && (
+          <span className="text-xs text-slate-400">
+            Xem trước: {stats.fps} FPS · {stats.frameP95 ?? 0} ms p95 · {stats.units} quân · {stats.pendingGiftUnits ?? 0} đang chờ
+          </span>
+        )}
       </Row>
 
-      <Row title="MC: Nam Minh / Hoài My dùng ngay; Adam bựa và các giọng khác cần VieNeu-TTS (chưa bật thì tự đọc Nam Minh)">
-        <B onClick={() => saveMc({ mcOn: mc.mcOn === '0' ? '1' : '0' })} on={mc.mcOn !== '0'}>
-          {mc.mcOn === '0' ? '🔇 MC đang tắt' : '🗣 MC đang bật'}
-        </B>
-        <select value={mc.mcVoice} onChange={(e) => saveMc({ mcVoice: e.target.value })} className="rounded-lg bg-slate-800 px-2 py-2 text-sm">
-          {GAME.voices.map((v) => (
-            <option key={v}>{v}</option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm">
-          tốc độ
-          <input type="range" min="0.9" max="1.5" step="0.05" value={mc.mcSpeed} onChange={(e) => saveMc({ mcSpeed: e.target.value })} />
-          {Number(mc.mcSpeed).toFixed(2)}x
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          biểu cảm
-          <input type="range" min="0.6" max="1.3" step="0.05" value={mc.mcExpr} onChange={(e) => saveMc({ mcExpr: e.target.value })} />
-          {Number(mc.mcExpr).toFixed(2)}
-        </label>
-        <B onClick={() => sendControl('speak', 'Cổng không gian vừa mở! Triệu hồi Bá Chủ Rồng Ưng xuất kích trợ chiến!')}>
-          ▶ Nghe thử trên stage
-        </B>
+      <Row title="Âm lượng trên live (đổi ngay, lưu cho lần sau)">
+        <Vol label="Nhạc nền" value={mc.musicVol} max={1.5} onChange={(v) => saveMc({ musicVol: v })} />
+        <Vol label="Hiệu ứng" value={mc.sfxVol} max={1.5} onChange={(v) => saveMc({ sfxVol: v })} />
+        <Vol label="Giọng MC" value={mc.mcVol} max={1} onChange={(v) => saveMc({ mcVol: v })} />
       </Row>
+
     </section>
   );
 }
@@ -331,4 +346,3 @@ function B({ children, onClick, on }: { children: ReactNode; onClick: () => void
     </button>
   );
 }
-

@@ -60,6 +60,7 @@ export function useGame() {
         user: ev.username,
         name: sanitizePlayerName(ev.nickname, ev.username),
         count: ev.likeCount,
+        avatar: ev.avatar,
       });
     },
 
@@ -116,6 +117,19 @@ export function useGame() {
         } else if (ev.text.startsWith('jump:')) {
           const j = Number(ev.text.slice(5));
           if (!Number.isNaN(j)) api.jump(j);
+        } else if (ev.text === 'siegeVote') {
+          api.startSiegeVote?.();
+        } else if (ev.text.startsWith('spawnSiege:')) {
+          const [side, lane] = ev.text.slice('spawnSiege:'.length).split(':');
+          if ((side === '0' || side === '1') && (lane === 'top' || lane === 'mid' || lane === 'bot')) {
+            api.spawnSiegeTank?.(Number(side), lane);
+          }
+        } else if (ev.text === 'overtime') {
+          api.startOvertime?.();
+        } else if (ev.text.startsWith('contest:')) {
+          api.testBossContest?.(ev.text.slice(8) as 'drag' | 'baron');
+        } else if (ev.text.startsWith('moment:')) {
+          api.testMoment?.(ev.text.slice(7) as 'turret' | 'boss' | 'lord');
         }
       }
     },
@@ -129,10 +143,9 @@ export function useGame() {
     const api = gameApi();
     if (!api) return;
     api.setSpeaker(live.isSpeaker);
-    api.setMc({ ...GAME.mc, ...live.prefs });
+    api.setMc({ ...GAME.mc, mcVoice: live.voiceWho === 'F' ? 'Hoài My' : 'Nam Minh', ...live.prefs });
     api.setGifts?.(live.giftRules);
-  }, [live.isSpeaker, live.prefs, live.giftRules]);
+  }, [live.isSpeaker, live.voiceWho, live.prefs, live.giftRules]);
 
   return { ...live, syncFrame };
 }
-

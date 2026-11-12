@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { LiveStatus } from './types';
 import { emitTest, sendControl } from './page';
 import { startAutoLive } from './autoLive';
+import { McSettings } from '../game/McSettings';
 
 export interface AutoLiveConfig {
   durationMs: number;
@@ -26,6 +27,7 @@ export function Dashboard({
   status,
   channelName,
   voiceWho,
+  prefs,
   preview,
   top,
   extra,
@@ -34,6 +36,7 @@ export function Dashboard({
   status: LiveStatus | null;
   channelName: string;
   voiceWho?: 'M' | 'F';
+  prefs: Record<string, string>;
   preview: ReactNode;
   top?: ReactNode;
   extra?: ReactNode;
@@ -119,10 +122,9 @@ export function Dashboard({
             </div>
           </Card>
 
-          {top}
-
-          <Card title="Giọng đọc trên stage">
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          <Card title="Giọng MC">
+            <McSettings prefs={prefs} voiceWho={voiceWho} />
+            <div className="mb-3 mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-4 text-sm">
               <span>
                 Tên kênh: <b className="text-amber-300">{channelName}</b>
               </span>
@@ -141,43 +143,23 @@ export function Dashboard({
             <div className="flex gap-2">
               <input
                 className="min-w-0 flex-1 rounded-lg bg-slate-800 px-3 py-2"
-                placeholder="Gõ câu muốn đọc ngay..."
+                placeholder="Gõ câu muốn đọc trên sân khấu..."
                 value={speakText}
                 onChange={(e) => setSpeakText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && speakText.trim() && speak()}
               />
               <Btn onClick={speak} disabled={!speakText.trim()}>
-                Đọc ngay
+                Đọc trên sân khấu
               </Btn>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              Giọng MC:
-              {(
-                [
-                  ['F', '👩 Nữ (Hoài My)'],
-                  ['M', '👨 Nam (Nam Minh)'],
-                ] as const
-              ).map(([v, label]) => (
-                <Btn key={v} tone={voiceWho === v ? 'primary' : 'ghost'} onClick={() => sendControl('setVoice', v)}>
-                  {label}
-                </Btn>
-              ))}
-              <Btn tone="ghost" onClick={() => sendControl('speak', 'Chào cả nhà, mình là MC của Long Ưng Chiến Trường hôm nay!')}>
-                🔊 Nghe thử
-              </Btn>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              Tốc độ:
-              {['0.85', '1', '1.15', '1.3'].map((r) => (
-                <Btn key={r} tone="ghost" onClick={() => sendControl('setRate', r)}>
-                  {r}×
-                </Btn>
-              ))}
+            <div className="mt-3">
               <Btn tone="danger" onClick={() => sendControl('reset')}>
                 Reset game
               </Btn>
             </div>
           </Card>
+
+          {top}
 
           <Card title="Giả lập nhanh (test khi chưa live)">
             <div className="flex flex-wrap gap-2">

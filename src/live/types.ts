@@ -38,6 +38,7 @@ export interface ViewerEvent {
 export interface LikeEvent {
   username: string;
   nickname: string;
+  avatar?: string;
   likeCount: number;
   totalLikes: number;
 }

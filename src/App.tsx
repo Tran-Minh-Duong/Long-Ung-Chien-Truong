@@ -49,6 +49,7 @@ export function App() {
           status={status}
           channelName={channelName}
           voiceWho={voiceWho}
+          prefs={prefs}
           top={<GameControls prefs={prefs} giftRules={giftRules} />}
           preview={<div className="p-6 text-xs text-slate-500">Đang ẩn xem trước</div>}
         />
@@ -57,6 +58,7 @@ export function App() {
           status={status}
           channelName={channelName}
           voiceWho={voiceWho}
+          prefs={prefs}
           top={<GameControls prefs={prefs} giftRules={giftRules} />}
           preview={<PreviewBox onReady={syncFrame} />}
         />

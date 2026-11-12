@@ -14,8 +14,14 @@ export interface GameStats {
   phase: 'fight' | 'result';
   time: number;
   fps: number;
+  frameP95?: number;
+  pendingGiftUnits?: number;
   dragPct?: number;
   baronPct?: number;
+  overtime?: boolean;
+  overtimeLeft?: number;
+  dragContested?: boolean;
+  baronContested?: boolean;
 }
 
 export interface GameApi {
@@ -28,6 +34,11 @@ export interface GameApi {
   setLength(sec: number): void;
   jump(j: number): void;
   newMatch(): void;
+  startSiegeVote?(): void;
+  spawnSiegeTank?(side: number, lane: string): void;
+  startOvertime?(): void;
+  testBossContest?(key: 'drag' | 'baron'): void;
+  testMoment?(kind: 'turret' | 'boss' | 'lord'): void;
   phase(): 'fight' | 'result';
   stats(): GameStats;
 }
@@ -36,4 +47,3 @@ export const frame: { el: HTMLIFrameElement | null } = { el: null };
 
 export const gameApi = (): GameApi | null =>
   ((frame.el?.contentWindow as unknown as { GAME_API?: GameApi } | null)?.GAME_API) ?? null;
-
