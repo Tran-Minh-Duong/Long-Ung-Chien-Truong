@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Long Ưng Chiến Trường - Đại Chiến 3 Đường</title>
+<title>Long Ưng Chiến Trường · Zuong</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800;900&family=Cinzel:wght@700;800;900&family=Lalezar&display=swap">
@@ -102,6 +102,17 @@ html.embed #panel { display: none; }
   -webkit-text-stroke: 2.5px #1f0d02;
   paint-order: stroke fill;
   text-shadow: 0 3px 0 #1c0b02, 0 0 18px rgba(255, 196, 46, 0.6);
+  white-space: nowrap;
+}
+.brandTag {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid #fde047;
+  background: linear-gradient(180deg, rgba(180, 83, 9, 0.92), rgba(120, 53, 15, 0.95));
+  color: #fffbeb;
+  font: 900 17px/1 var(--display);
+  letter-spacing: 1.2px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7), inset 0 0 8px rgba(254, 240, 138, 0.3);
   white-space: nowrap;
 }
 
@@ -298,6 +309,34 @@ html.embed #panel { display: none; }
     0 0 0 3px #190e03,
     0 12px 42px rgba(0, 0, 0, .85);
   pointer-events: none;
+}
+#mapRankBtn {
+  position: absolute;
+  left: 42px;
+  top: 284px;
+  z-index: 15;
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 2px solid #e7ba4d;
+  background: linear-gradient(180deg, rgba(32, 24, 15, 0.94), rgba(11, 10, 18, 0.96));
+  color: #fde68a;
+  font: 800 22px/1 var(--body);
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.78), inset 0 0 12px rgba(231, 186, 77, 0.16);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+#mapRankBtn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+#mapRankBtn:active { transform: scale(0.97); }
+#mapRankBtn.on {
+  border-color: #fde047;
+  background: linear-gradient(180deg, #b45309, #78350f);
+  color: #fffbeb;
 }
 
 /* Corner HUDs matching image */
@@ -800,13 +839,52 @@ html.embed #panel { display: none; }
 .mvpCompanion .mvpTeam, .mvpCompanion .mvpScore { flex-shrink: 0; }
 .mvpCompanion .giftDonor { font-size: 25px; }
 .mvpScore { color: #e7ceab; }
-.resCard .s {
-  margin: 18px 0 0;
+.resFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid #b28b5559;
-  font: 700 25px/1.2 var(--body);
+}
+.resCard .s {
+  margin: 0;
+  font: 700 24px/1.2 var(--body);
   color: #e9c98d;
+  text-align: left;
   font-variant-numeric: tabular-nums;
+}
+.resActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.resActionBtn {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 1.5px solid #f5ca79;
+  background: linear-gradient(180deg, #d97706, #92400e);
+  color: #fffbeb;
+  font: 800 22px/1 var(--body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.resActionBtn.secondary {
+  border-color: #a6814a88;
+  background: #231d19;
+  color: #f3e2c7;
+}
+.resActionBtn:hover { filter: brightness(1.14); }
+.resActionBtn[hidden] { display: none; }
+.resBrand {
+  margin-top: 12px;
+  font: 800 16px/1 var(--display);
+  letter-spacing: 1.4px;
+  color: #c4a472;
+  opacity: 0.85;
 }
 .giftBoardHead {
   display: flex;
@@ -1014,6 +1092,7 @@ html.embed #panel { display: none; }
               <circle cx="96" cy="44" r="3.5" fill="#dc2626"/>
             </svg>
             <div class="brandTitle o">LONG ƯNG CHIẾN TRƯỜNG</div>
+            <span class="brandTag">ZUONG</span>
           </div>
         </div>
 
@@ -1076,6 +1155,7 @@ html.embed #panel { display: none; }
 
         <!-- Map Ornamental Border -->
         <div id="mapFrame"></div>
+        <button id="mapRankBtn" type="button" aria-label="Mở bảng xếp hạng">🏆 BXH</button>
 
         <!-- Dynamic Stage Toasts -->
         <div id="bossToast" class="o"></div>
@@ -1142,7 +1222,14 @@ html.embed #panel { display: none; }
               </div>
               <p class="giftRankEmpty" id="giftRankEmpty" hidden>Chưa có quà tặng trong phiên này.</p>
             </section>
-            <div class="s">Trận mới sau 10 giây...</div>
+            <div class="resFooter">
+              <div class="s">Trận mới sau 10 giây...</div>
+              <div class="resActions">
+                <button class="resActionBtn" id="resPinBtn" type="button">📌 Giữ BXH</button>
+                <button class="resActionBtn secondary" id="resCloseBtn" type="button">✕ Đóng</button>
+              </div>
+            </div>
+            <div class="resBrand">© ZUONG · LONG ƯNG CHIẾN TRƯỜNG</div>
           </div>
         </div>
 
@@ -1196,6 +1283,7 @@ html.embed #panel { display: none; }
       <div class="pRow">
         <button class="pBtn" id="snd">🔇 Bật âm thanh</button>
         <button class="pBtn" id="newMatch">⚔️ Trận mới</button>
+        <button class="pBtn" id="toggleLeaderboardBtn" type="button">🏆 Xem BXH</button>
       </div>
       <div class="pRow">
         <button class="pBtn on" data-len="1800">30 phút</button>
@@ -1700,6 +1788,60 @@ function paintTerrain() {
   }
   drawBasePlaza(128, 862, 'rgba(239, 68, 68, 0.55)', 'rgba(127, 29, 29, 0.45)', '#f87171');
   drawBasePlaza(875, 130, 'rgba(56, 189, 248, 0.55)', 'rgba(12, 74, 110, 0.45)', '#38bdf8');
+  drawBrandWatermarkOnTerrain(g);
+}
+function drawBrandWatermarkOnTerrain(g) {
+  // Subtle carved studio mark across center arena bridge
+  g.save();
+  g.translate(500 * SXY, 500 * SXY);
+  g.rotate(-Math.PI / 4);
+  g.font = '900 54px Cinzel, "Be Vietnam Pro", serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineWidth = 4;
+  g.strokeStyle = 'rgba(10, 14, 28, 0.30)';
+  g.strokeText('ZUONG', 0, 0);
+  g.fillStyle = 'rgba(253, 224, 71, 0.20)';
+  g.fillText('ZUONG', 0, 0);
+  g.restore();
+
+  // Subtle river watermarks along diagonal stream
+  for (const [rx, ry] of [[225, 225], [775, 775]]) {
+    g.save();
+    g.translate(rx * SXY, ry * SXY);
+    g.rotate(Math.PI / 4);
+    g.font = '800 22px Cinzel, "Be Vietnam Pro", serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(8, 22, 38, 0.35)';
+    g.strokeText('© ZUONG', 0, 0);
+    g.fillStyle = 'rgba(186, 230, 253, 0.28)';
+    g.fillText('© ZUONG', 0, 0);
+    g.restore();
+  }
+
+  // Crisp bottom-right map plaque
+  g.save();
+  g.font = '900 20px Cinzel, "Be Vietnam Pro", serif';
+  const tag = '© ZUONG';
+  const tw = g.measureText(tag).width;
+  const pw = tw + 26;
+  const ph = 34;
+  const px = MAP_PX - pw - 14;
+  const py = MAP_PX - ph - 14;
+  g.fillStyle = 'rgba(11, 10, 20, 0.86)';
+  g.strokeStyle = 'rgba(231, 186, 77, 0.85)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.roundRect(px, py, pw, ph, 10);
+  g.fill();
+  g.stroke();
+  g.fillStyle = '#fde68a';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(tag, px + pw / 2, py + ph / 2 + 1);
+  g.restore();
 }
 paintTerrain();
 
@@ -1741,6 +1883,7 @@ function drawPitLabelsOnTerrain(g) {
     g.fillText(label, cxNorm * SXY, cyNorm * SXY);
     g.restore();
   }
+  drawBrandWatermarkOnTerrain(g);
 }
 
 for (const [key, src] of Object.entries(TEX_SRC)) {
@@ -2077,6 +2220,9 @@ const giftCoinFormat = new Intl.NumberFormat('vi-VN');
 const giftRankScroll = $('giftRankScroll');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let manualGiftScroll = false;
+let manualLeaderboardOpen = false;
+let lastResultSnapshot = null;
+let leaderboardRefreshTimer = null;
 for (const type of ['wheel', 'pointerdown', 'keydown']) {
   giftRankScroll.addEventListener(type, () => { manualGiftScroll = true; });
 }
@@ -2144,6 +2290,11 @@ function setGraphics(value) {
 
 function newMatch() {
   if (S?.resultTimer) clearTimeout(S.resultTimer);
+  if (leaderboardRefreshTimer) {
+    clearInterval(leaderboardRefreshTimer);
+    leaderboardRefreshTimer = null;
+  }
+  manualLeaderboardOpen = false;
   for (const id of ['bossToast', 'summonBanner']) {
     const el = $(id);
     clearTimeout(el._t);
@@ -2212,6 +2363,7 @@ function newMatch() {
   giftRank.nextMatch = new Map();
   $('result').classList.remove('on');
   $('result').setAttribute('aria-hidden', 'true');
+  syncLeaderboardBtn();
   addTicker('Trận đấu bắt đầu. Gõ 1 vào Đỏ, 2 vào Xanh.');
   if (mc.speaker) mcSay('Trận đại chiến Long Ưng Chiến Trường bắt đầu! Anh em gõ 1 vào đội Đỏ, gõ 2 vào đội Xanh nha!', 3);
   drainGiftQueue();
@@ -3352,13 +3504,14 @@ function renderMatchMvp(finished, winSide) {
   </div>` : ''}`;
 }
 
-function renderGiftRank(finished) {
+function renderGiftRank(finished, roundText = null, preserveScroll = false) {
+  const prevTop = preserveScroll ? giftRankScroll.scrollTop : 0;
   const rankings = [...giftRank.totals]
     .sort(([, a], [, b]) => b.coins - a.coins)
     .map(([id, donor]) => ({ ...donor, current: finished.giftCoins.get(id) || 0 }));
   const number = (coins) => giftCoinFormat.format(coins);
   const roundAmount = (coins) => coins > 0 ? '+' + number(coins) : '0';
-  $('giftBoardRound').textContent = `Cộng dồn · Trận ${giftRank.completed}`;
+  $('giftBoardRound').textContent = roundText || `Cộng dồn · Trận ${giftRank.completed}`;
   $('giftRankEmpty').hidden = rankings.length > 0;
   $('giftPodium').hidden = rankings.length === 0;
   $('giftPodium').innerHTML = rankings.length ? [1, 2, 3].map((rank) => {
@@ -3378,13 +3531,97 @@ function renderGiftRank(finished) {
       <td>${roundAmount(donor.current)}</td><td>${number(donor.coins)}</td></tr>`;
   }).join('');
   giftRankScroll.hidden = rankings.length <= 3;
-  giftRankScroll.scrollTop = 0;
-  manualGiftScroll = false;
+  if (preserveScroll) {
+    giftRankScroll.scrollTop = prevTop;
+  } else {
+    giftRankScroll.scrollTop = 0;
+    manualGiftScroll = false;
+  }
+}
+
+function syncLeaderboardBtn() {
+  const open = !!($('result')?.classList.contains('on'));
+  const btn = $('toggleLeaderboardBtn');
+  if (btn) {
+    btn.classList.toggle('on', open);
+    btn.textContent = open ? '✕ Đóng BXH' : '🏆 Xem BXH';
+  }
+  const mapBtn = $('mapRankBtn');
+  if (mapBtn) {
+    mapBtn.classList.toggle('on', open);
+    mapBtn.textContent = open ? '✕ Đóng BXH' : '🏆 BXH';
+  }
+  const pinBtn = $('resPinBtn');
+  if (pinBtn) pinBtn.hidden = !(S?.phase === 'result' && !manualLeaderboardOpen);
+  const closeBtn = $('resCloseBtn');
+  if (closeBtn) closeBtn.textContent = S?.phase === 'result' ? '▶ Trận mới' : '✕ Đóng BXH';
+}
+
+function renderManualLeaderboard(preserveScroll = false) {
+  if (!S) return;
+  const hasLiveData = S.players.size > 0 || S.giftCoins.size > 0;
+  const source = (!hasLiveData && lastResultSnapshot) ? lastResultSnapshot : S;
+  const usingSnapshot = source !== S;
+  const winSide = usingSnapshot ? source.winSide : -1;
+  renderMatchMvp(source, winSide);
+  const roundLabel = usingSnapshot
+    ? `Cộng dồn · Trận ${source.completed}`
+    : (giftRank.completed > 0 ? `Cộng dồn · Trận ${giftRank.completed + 1} (đang đấu)` : 'Cộng dồn · Trận đang đấu');
+  renderGiftRank(source, roundLabel, preserveScroll);
+  const rEl = $('result');
+  rEl.dataset.winner = (winSide === RED || winSide === BLUE) ? String(winSide) : 'draw';
+  rEl.querySelector('.w').textContent = usingSnapshot
+    ? `BẢNG XẾP HẠNG · TRẬN ${source.completed}`
+    : 'BẢNG XẾP HẠNG & MVP';
+  rEl.querySelector('.s').textContent = 'Đang xem bảng xếp hạng · Trận đấu vẫn chạy bên dưới';
+}
+
+function toggleLeaderboard(force) {
+  if (!S) return;
+  const rEl = $('result');
+  if (S.phase === 'result') {
+    if (!manualLeaderboardOpen && force !== false) {
+      if (S.resultTimer) {
+        clearTimeout(S.resultTimer);
+        S.resultTimer = null;
+      }
+      manualLeaderboardOpen = true;
+      rEl.querySelector('.s').textContent = 'Đang giữ bảng xếp hạng · Bấm lại để bắt đầu trận mới';
+      syncLeaderboardBtn();
+    } else if (force !== true) {
+      newMatch();
+    }
+    return;
+  }
+
+  const next = typeof force === 'boolean' ? force : !manualLeaderboardOpen;
+  manualLeaderboardOpen = next;
+  if (leaderboardRefreshTimer) {
+    clearInterval(leaderboardRefreshTimer);
+    leaderboardRefreshTimer = null;
+  }
+  if (next) {
+    renderManualLeaderboard(false);
+    rEl.setAttribute('aria-hidden', 'false');
+    rEl.classList.add('on');
+    leaderboardRefreshTimer = setInterval(() => {
+      if (manualLeaderboardOpen && S?.phase === 'fight') renderManualLeaderboard(true);
+    }, 1000);
+  } else {
+    rEl.classList.remove('on');
+    rEl.setAttribute('aria-hidden', 'true');
+  }
+  syncLeaderboardBtn();
 }
 
 function endMatch(winSide, wonObjective = false) {
   if (!S || S.phase !== 'fight') return;
   if (S.resultAnnounced) return;
+  if (leaderboardRefreshTimer) {
+    clearInterval(leaderboardRefreshTimer);
+    leaderboardRefreshTimer = null;
+  }
+  manualLeaderboardOpen = false;
   S.resultAnnounced = true;
   S.phase = 'result';
   S.siegeVote.active = false;
@@ -3395,6 +3632,12 @@ function endMatch(winSide, wonObjective = false) {
   const finished = S;
   sfx('win');
   giftRank.completed++;
+  lastResultSnapshot = {
+    winSide,
+    players: new Map(finished.players),
+    giftCoins: new Map(finished.giftCoins),
+    completed: giftRank.completed,
+  };
   saveGiftRank();
   renderMatchMvp(finished, winSide);
   renderGiftRank(finished);
@@ -3426,6 +3669,7 @@ function endMatch(winSide, wonObjective = false) {
   }
   rEl.setAttribute('aria-hidden', 'false');
   rEl.classList.add('on');
+  syncLeaderboardBtn();
   let left = 10;
   const countdown = () => {
     rEl.querySelector('.s').textContent = `Trận mới sau ${left} giây · gõ 1 hoặc 2 để chọn phe`;
@@ -4553,6 +4797,10 @@ function speakDemoLine(text, signal) {
 }
 
 // ================= GLOBAL GAME_API (HOST BRIDGE) =================
+if ($('mapRankBtn')) $('mapRankBtn').onclick = () => toggleLeaderboard();
+if ($('resPinBtn')) $('resPinBtn').onclick = () => toggleLeaderboard(true);
+if ($('resCloseBtn')) $('resCloseBtn').onclick = () => (S?.phase === 'result' ? newMatch() : toggleLeaderboard(false));
+
 window.GAME_API = {
   event(ev) {
     if (!ev || !S) return { side: null, joined: false };
@@ -4655,6 +4903,7 @@ window.GAME_API = {
     if (!S?.overtime || !S.overtimeObjective || (attackerSide !== RED && attackerSide !== BLUE)) return;
     applyDamage(attackerSide, 'tester', { kind: 'overtimeObjective', ref: S.overtimeObjective }, 5000);
   },
+  toggleLeaderboard(force) { toggleLeaderboard(force); },
   phase() { return S ? S.phase : 'fight'; },
   stats() {
     if (!S) return { units: 0, dragons: 0, fx: 0, hp: [0, 0], kills: [0, 0], cmt: [0, 0], players: 0, heart: [0, 0], broken: [0, 0], round: 0, phase: 'fight', time: 0, fps: fpsShown };
@@ -4686,6 +4935,8 @@ window.GAME_API = {
       overtimeLeft: Math.ceil(S.overtimeLeft || 0),
       dragContested: !!S.bosses.drag.contested,
       baronContested: !!S.bosses.baron.contested,
+      leaderboardOpen: !!($('result')?.classList.contains('on')),
+      leaderboardPinned: manualLeaderboardOpen,
     };
   },
 };
@@ -4751,6 +5002,7 @@ if (!EMBED) {
   }));
   $('snd').onclick = async () => { await soundOn(!sndOn); $('snd').textContent = sndOn ? '🔊 Tắt âm' : '🔇 Bật âm thanh'; };
   $('newMatch').onclick = newMatch;
+  $('toggleLeaderboardBtn').onclick = () => toggleLeaderboard();
   $('mcOn').onchange = () => window.GAME_API.setMc({ mcOn: $('mcOn').checked ? '1' : '0' });
   $('mcVoice').onchange = () => { mcPrefs.mcVoice = $('mcVoice').value; };
   $('mcSpeed').oninput = () => { mcPrefs.mcSpeed = $('mcSpeed').value; $('mcSpeedV').textContent = Number(mcPrefs.mcSpeed).toFixed(2) + 'x'; };

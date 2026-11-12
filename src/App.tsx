@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dashboard } from './live/Dashboard';
 import { IS_STAGE, OpenStage } from './live/page';
 import { StageFrame } from './live/StageFrame';
-import { GameControls, ViewSwitch, type ViewMode } from './game/GameControls';
+import { GameControls, LeaderboardButton, ViewSwitch, type ViewMode } from './game/GameControls';
 import { GameStage } from './game/GameStage';
 import { useGame } from './game/useGame';
 
@@ -32,10 +32,13 @@ export function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/90 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold tracking-wide text-amber-400">🐉 Long Ưng Chiến Trường</span>
+          <span className="text-sm font-bold tracking-wide text-amber-400">🐉 Long Ưng Chiến Trường · Zuong</span>
           <ViewSwitch mode={view} onChange={setView} />
         </div>
-        <OpenStage />
+        <div className="flex items-center gap-2">
+          <LeaderboardButton />
+          <OpenStage />
+        </div>
       </div>
 
       {view === 'game' ? (

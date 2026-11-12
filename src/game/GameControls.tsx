@@ -28,8 +28,10 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
   rulesRef.current = giftRules;
   const [simInfo, setSimInfo] = useState('');
   const [stats, setStats] = useState<GameStats | null>(null);
+  const refreshStats = () => setStats(gameApi()?.stats() ?? null);
   useEffect(() => {
-    const timer = setInterval(() => setStats(gameApi()?.stats() ?? null), 1000);
+    refreshStats();
+    const timer = setInterval(refreshStats, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -162,7 +164,7 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
   return (
     <section className="space-y-4 rounded-2xl bg-slate-900 p-4 ring-1 ring-slate-800">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold text-amber-300">Long Ưng Chiến Trường · Điều khiển</h2>
+        <h2 className="font-semibold text-amber-300">Long Ưng Chiến Trường · Zuong · Điều khiển</h2>
         <button
           onClick={() => setShowRules((v) => !v)}
           className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-amber-200 hover:bg-slate-700"
@@ -184,6 +186,7 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
 
       <Row title="Trận đấu">
         <B onClick={() => sendControl('custom', 'match')}>Trận mới</B>
+        <LeaderboardButton stats={stats} onAfterClick={() => setTimeout(refreshStats, 150)} />
         <B onClick={() => sendControl('custom', 'len:1800')}>30 phút</B>
         <B onClick={() => sendControl('custom', 'len:300')}>5 phút (thử)</B>
         <B onClick={() => sendControl('custom', 'len:90')}>90 giây (thử)</B>
@@ -292,6 +295,41 @@ export function GameControls({ prefs, giftRules }: { prefs: Record<string, strin
       </Row>
 
     </section>
+  );
+}
+
+export function LeaderboardButton({ stats, onAfterClick }: { stats?: GameStats | null; onAfterClick?: () => void }) {
+  const [polled, setPolled] = useState<GameStats | null>(null);
+  const sync = () => setPolled(gameApi()?.stats() ?? null);
+  useEffect(() => {
+    if (stats !== undefined) return;
+    sync();
+    const timer = setInterval(sync, 500);
+    return () => clearInterval(timer);
+  }, [stats]);
+  const s = stats !== undefined ? stats : polled;
+  const pinned = !!s?.leaderboardPinned;
+  const open = !!s?.leaderboardOpen;
+  const label = !s
+    ? '🏆 Bật / Tắt BXH'
+    : pinned
+      ? '✕ Đóng BXH'
+      : open
+        ? '📌 Giữ BXH'
+        : '🏆 Xem BXH';
+  const action = !s ? 'toggleLeaderboard' : pinned ? 'hideLeaderboard' : 'showLeaderboard';
+  return (
+    <B
+      onClick={() => {
+        void sendControl('custom', action).then(() => {
+          onAfterClick?.();
+          if (stats === undefined) setTimeout(sync, 150);
+        });
+      }}
+      on={pinned}
+    >
+      {label}
+    </B>
   );
 }
 

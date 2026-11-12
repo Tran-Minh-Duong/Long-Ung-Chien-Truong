@@ -22,6 +22,8 @@ export interface GameStats {
   overtimeLeft?: number;
   dragContested?: boolean;
   baronContested?: boolean;
+  leaderboardOpen?: boolean;
+  leaderboardPinned?: boolean;
 }
 
 export interface GameApi {
@@ -39,6 +41,7 @@ export interface GameApi {
   startOvertime?(): void;
   testBossContest?(key: 'drag' | 'baron'): void;
   testMoment?(kind: 'turret' | 'boss' | 'lord'): void;
+  toggleLeaderboard?(force?: boolean): void;
   phase(): 'fight' | 'result';
   stats(): GameStats;
 }

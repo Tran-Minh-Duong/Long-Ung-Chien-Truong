@@ -2,7 +2,7 @@ import type { WishTopic } from '../live/chatter';
 
 export const GAME = {
   title: 'Long Ưng Chiến Trường',
-  subtitle: 'Đại Chiến 3 Đường',
+  subtitle: 'Đại Chiến 3 Đường · Zuong',
   defaultChannelName: 'kênh mình',
 
   mc: {

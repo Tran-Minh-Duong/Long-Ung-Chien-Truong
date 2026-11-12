@@ -130,6 +130,12 @@ export function useGame() {
           api.testBossContest?.(ev.text.slice(8) as 'drag' | 'baron');
         } else if (ev.text.startsWith('moment:')) {
           api.testMoment?.(ev.text.slice(7) as 'turret' | 'boss' | 'lord');
+        } else if (ev.text === 'toggleLeaderboard') {
+          api.toggleLeaderboard?.();
+        } else if (ev.text === 'showLeaderboard') {
+          api.toggleLeaderboard?.(true);
+        } else if (ev.text === 'hideLeaderboard') {
+          api.toggleLeaderboard?.(false);
         }
       }
     },

@@ -9,7 +9,7 @@ export function GameStage({ onReady }: { onReady?: () => void }) {
         frame.el = el;
       }}
       src={src}
-      title="Long Ưng Chiến Trường"
+      title="Long Ưng Chiến Trường · Zuong"
       allow="autoplay"
       onLoad={() => onReady?.()}
       className="h-full w-full border-0 bg-black"
