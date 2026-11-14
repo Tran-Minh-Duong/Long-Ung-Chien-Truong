@@ -23,6 +23,19 @@ const pick = () => {
   return { nickname, username: nickname.normalize('NFKD').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'khach' };
 };
 
+function parseTikTokUser(val: string): string {
+  let s = String(val || '').trim();
+  if (!s) return '';
+  const match = s.match(/@([a-zA-Z0-9_.]+)/i);
+  if (match) return match[1];
+  s = s.split('?')[0].replace(/^@/, '').replace(/\/$/, '').trim();
+  if (s.includes('/')) {
+    const parts = s.split('/').filter(Boolean);
+    s = (parts[parts.length - 1] || '').replace(/^@/, '');
+  }
+  return s;
+}
+
 export function Dashboard({
   status,
   channelName,
@@ -49,23 +62,38 @@ export function Dashboard({
   const [busy, setBusy] = useState(false);
 
   const connect = async () => {
+    const targetUser = parseTikTokUser(user);
+    if (!targetUser) {
+      setMsg('Chưa nhập username TikTok');
+      return;
+    }
+    if (targetUser !== user) {
+      setUser(targetUser);
+    }
     setBusy(true);
     setMsg('');
-    localStorageSet('tiktokUser', user);
+    localStorageSet('tiktokUser', targetUser);
     try {
       const r = await fetch('/api/tiktok/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: user }),
+        body: JSON.stringify({ username: targetUser }),
       }).then((x) => x.json());
-      setMsg(r.success ? 'Đã kết nối' : r.error);
+      if (r.success) {
+        setMsg('');
+      } else {
+        setMsg(r.error || 'Không thể kết nối');
+      }
     } catch (e) {
       setMsg(String(e));
     }
     setBusy(false);
   };
 
-  const disconnect = () => fetch('/api/tiktok/disconnect', { method: 'POST' });
+  const disconnect = () => {
+    setMsg('Đã ngắt kết nối');
+    return fetch('/api/tiktok/disconnect', { method: 'POST' });
+  };
 
   const speak = async () => {
     const r = await sendControl('speak', speakText);
@@ -87,9 +115,13 @@ export function Dashboard({
             <div className="flex flex-wrap gap-2">
               <input
                 className="min-w-0 flex-1 rounded-lg bg-slate-800 px-3 py-2"
-                placeholder="username TikTok (không cần @)"
+                placeholder="Nhập ID TikTok (VD: zuonggg04 hoặc dán link live)"
                 value={user}
-                onChange={(e) => setUser(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const parsed = parseTikTokUser(raw);
+                  setUser(parsed || raw);
+                }}
               />
               <Btn onClick={connect} disabled={busy || !user.trim()}>
                 {busy ? 'Đang nối...' : 'Kết nối'}
@@ -101,24 +133,31 @@ export function Dashboard({
             <div className="mt-3 text-sm">
               Trạng thái:{' '}
               {status?.isConnected ? (
-                <span className="text-emerald-400">
-                  Đang live @{status.username} · {status.viewerCount} người xem · {status.totalLikes} tim
+                <span className="font-semibold text-emerald-400">
+                  ● Đang kết nối LIVE @{status.username} · {status.viewerCount} người xem · {status.totalLikes} tim
                 </span>
               ) : status?.isConnecting ? (
-                <span className="text-amber-400">Đang kết nối...</span>
+                <span className="font-semibold text-amber-400">⏳ Đang kết nối...</span>
               ) : (
-                <span className="text-slate-400">Chưa kết nối</span>
+                <span className="text-slate-400">○ Chưa kết nối</span>
               )}
             </div>
-            {(msg || status?.error) && <div className="mt-1 text-sm text-amber-300">{msg || status?.error}</div>}
+            {status?.error && (
+              <div className="mt-2 rounded-lg border border-red-800/60 bg-red-950/60 p-2.5 text-sm text-red-200">
+                ⚠️ {status.error}
+              </div>
+            )}
+            {!status?.error && msg && <div className="mt-1 text-sm text-amber-300">{msg}</div>}
             {(status?.stages ?? 0) > 1 && (
               <div className="mt-2 rounded-lg bg-red-900/60 p-2 text-sm text-red-100">
                 Đang mở {status!.stages} trang stage. Chỉ trang mở sau cùng phát tiếng, các trang kia im. Nên đóng bớt cho đỡ nhầm.
               </div>
             )}
-            <div className="mt-3 rounded-lg bg-slate-800/60 p-3 text-xs text-slate-400">
-              Link cho TikTok LIVE Studio: <b className="text-slate-200">http://lvh.me:{window.location.port || 80}/?view=stage</b> · 1080 × 1920.
-              Chỉ trang đó phát tiếng.
+            <div className="mt-3 rounded-lg bg-blue-950/30 border border-blue-900/40 p-3 text-xs text-blue-200 space-y-1">
+              <div className="font-semibold text-amber-300">💡 Hướng dẫn kết nối TikTok LIVE & Âm thanh:</div>
+              <div>• <b>Bật LIVE trước:</b> Bạn cần bấm <i>Phát trực tiếp (Go LIVE)</i> trên TikTok LIVE Studio hoặc điện thoại trước, sau đó mới bấm nút <b>Kết nối</b>.</div>
+              <div>• <b>Âm thanh & MC đọc tên:</b> Trang điều khiển này được tắt tiếng để tránh vọng âm. Âm thanh game và giọng MC chỉ phát trên trang Sân khấu (bấm nút <b>Mở sân khấu</b> ở góc trên bên phải hoặc dùng link <code>http://lvh.me:{window.location.port || 80}/?view=stage</code> làm Browser Source trong TikTok LIVE Studio).</div>
+              <div>• <b>Test thử trước khi live:</b> Bấm các nút ở mục <b>"Giả lập nhanh"</b> phía dưới để thử triệu hồi quân và nghe MC đọc tên ngay lập tức!</div>
             </div>
           </Card>
 

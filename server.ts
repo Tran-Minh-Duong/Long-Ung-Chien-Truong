@@ -230,9 +230,38 @@ function avatarOf(data: any): string {
   return '';
 }
 
+function cleanTikTokUsername(raw: unknown): string {
+  let s = String(raw || '').trim();
+  if (!s) return '';
+  const match = s.match(/@([a-zA-Z0-9_.]+)/i);
+  if (match) return match[1];
+  s = s.split('?')[0].replace(/^@/, '').replace(/\/$/, '').trim();
+  if (s.includes('/')) {
+    const parts = s.split('/').filter(Boolean);
+    s = (parts[parts.length - 1] || '').replace(/^@/, '');
+  }
+  return s;
+}
+
+function formatError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'object' && err !== null) {
+    const e = err as any;
+    if (e.message && typeof e.message === 'string') return e.message;
+    if (e.error && typeof e.error === 'string') return e.error;
+    try {
+      const json = JSON.stringify(err);
+      if (json && json !== '{}') return json;
+    } catch {
+      // bỏ qua
+    }
+  }
+  return String(err);
+}
+
 app.post('/api/tiktok/connect', async (req, res) => {
-  const cleanUser = String(req.body?.username || '').replace(/^@/, '').trim();
-  if (!cleanUser) return res.status(400).json({ success: false, error: 'Chưa nhập username TikTok' });
+  const cleanUser = cleanTikTokUsername(req.body?.username);
+  if (!cleanUser) return res.status(400).json({ success: false, error: 'Chưa nhập username TikTok (ví dụ: zuonggg04)' });
 
   if (activeConn) {
     try {
@@ -259,8 +288,15 @@ app.post('/api/tiktok/connect', async (req, res) => {
 
   conn.on(ControlEvent.DISCONNECTED, () => {
     console.log(`[TikTok] Mất kết nối @${cleanUser}`);
-    liveStats = { ...liveStats, isConnected: false, isConnecting: false };
-    broadcast('status', liveStats);
+    if (activeConn === conn) {
+      liveStats = {
+        ...liveStats,
+        isConnected: false,
+        isConnecting: false,
+        error: 'Mất kết nối với phiên live TikTok (tài khoản chưa phát trực tiếp hoặc phiên live đã kết thúc)',
+      };
+      broadcast('status', liveStats);
+    }
   });
 
   conn.on(WebcastEvent.STREAM_END, () => {
@@ -351,7 +387,7 @@ app.post('/api/tiktok/connect', async (req, res) => {
   });
 
   conn.on(ControlEvent.ERROR, (err: unknown) => {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = formatError(err);
     console.warn(`[TikTok] Lỗi @${cleanUser}:`, msg);
     liveStats.error = msg;
     broadcast('status', liveStats);
@@ -373,7 +409,7 @@ app.post('/api/tiktok/connect', async (req, res) => {
     ]).finally(() => clearTimeout(timer));
     return res.json({ success: true, roomId: state?.roomId });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = formatError(err);
     if (activeConn === conn) {
       try {
         conn.disconnect();
