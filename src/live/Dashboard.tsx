@@ -60,6 +60,16 @@ export function Dashboard({
   const [msg, setMsg] = useState('');
   const [speakText, setSpeakText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const stageUrl = `http://lvh.me:${typeof window !== 'undefined' && window.location.port ? window.location.port : '3000'}/?view=stage`;
+  const copyStageUrl = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(stageUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const connect = async () => {
     const targetUser = parseTikTokUser(user);
@@ -153,11 +163,20 @@ export function Dashboard({
                 Đang mở {status!.stages} trang stage. Chỉ trang mở sau cùng phát tiếng, các trang kia im. Nên đóng bớt cho đỡ nhầm.
               </div>
             )}
-            <div className="mt-3 rounded-lg bg-blue-950/30 border border-blue-900/40 p-3 text-xs text-blue-200 space-y-1">
-              <div className="font-semibold text-amber-300">💡 Hướng dẫn kết nối TikTok LIVE & Âm thanh:</div>
-              <div>• <b>Bật LIVE trước:</b> Bạn cần bấm <i>Phát trực tiếp (Go LIVE)</i> trên TikTok LIVE Studio hoặc điện thoại trước, sau đó mới bấm nút <b>Kết nối</b>.</div>
-              <div>• <b>Âm thanh & MC đọc tên:</b> Trang điều khiển này được tắt tiếng để tránh vọng âm. Âm thanh game và giọng MC chỉ phát trên trang Sân khấu (bấm nút <b>Mở sân khấu</b> ở góc trên bên phải hoặc dùng link <code>http://lvh.me:{window.location.port || 80}/?view=stage</code> làm Browser Source trong TikTok LIVE Studio).</div>
-              <div>• <b>Test thử trước khi live:</b> Bấm các nút ở mục <b>"Giả lập nhanh"</b> phía dưới để thử triệu hồi quân và nghe MC đọc tên ngay lập tức!</div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-850 border border-slate-800 bg-slate-800/60 p-3 text-xs text-slate-400">
+              <div>
+                Link cho TikTok LIVE Studio: <b className="select-all text-slate-200">{stageUrl}</b> · 1080 × 1920. Chỉ trang đó phát tiếng.
+              </div>
+              <button
+                type="button"
+                className="shrink-0 rounded bg-slate-700 hover:bg-slate-600 px-3 py-1 text-xs font-medium text-slate-200 transition cursor-pointer active:scale-95"
+                onClick={copyStageUrl}
+              >
+                {copied ? '✓ Đã chép' : 'Sao chép link'}
+              </button>
+            </div>
+            <div className="mt-2 text-xs text-slate-400">
+              💡 <b>Lưu ý:</b> Bật <i>Phát trực tiếp (Go LIVE)</i> trên TikTok LIVE Studio hoặc điện thoại trước rồi mới bấm <b>Kết nối</b>.
             </div>
           </Card>
 
